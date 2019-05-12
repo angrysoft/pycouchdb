@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['Server']
+__all__ = ['Server', 'Database']
 
-from .server import (Server)
+from .server import Server
+from .db import Database

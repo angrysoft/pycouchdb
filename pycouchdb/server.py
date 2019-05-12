@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from urllib.request import urlopen, Request
 from urllib.parse import urlencode
 import json
 import urllib.error
-from .db import Databse
+from .db import Database
 
 
 class Server:
@@ -42,6 +43,13 @@ class Server:
     def _jload(data):
         try:
             return json.loads(data)
+        except json.JSONDecodeError:
+            raise ServerError('data')
+
+    @staticmethod
+    def _jdump(data):
+        try:
+            return json.dumps(data)
         except json.JSONDecodeError:
             raise ServerError('data')
 
@@ -115,14 +123,18 @@ class Server:
 
     def _request(self, path, method='GET', data=None, headers={}):
         req = Request(url=f'{self.url}/{path}', method=method, data=data, headers=headers)
-        with urlopen(req) as r:
-            print(dir(r))
-            return r.code, r.read()
+        try:
+            r = urlopen(req)
+            if r.readable:
+                return r.code, r.read()
+        except urllib.error.HTTPError as err:
+            print(err)
+            return err.code, None
 
     def db(self, name):
         status, ret = self._head(path=name)
         if status == 200:
-            return Databse(name, self)
+            return Database(name, self)
         elif status == 404:
             raise ServerError(f'Requested database not found:  {name}')
 
@@ -152,11 +164,3 @@ class Server:
 class ServerError(Exception):
     pass
 
-
-if __name__ == '__main__':
-    s = Server()
-    print(s.version)
-    print(s.uuid)
-    print(s.vendor)
-    print(s.all_dbs())
-    print(s.membership())

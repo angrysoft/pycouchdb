@@ -13,8 +13,13 @@
 # limitations under the License.
 
 
-class Databese:
-    def __init__(self,name, server):
+class Query:
+    def __init__(self):
+        pass
+
+
+class Database:
+    def __init__(self, name, server):
         self.server = server
         self.name = name
 
@@ -32,9 +37,23 @@ class Databese:
         elif status == 409:
             raise DatabaseError('Conflict – A Conflicting Document with same ID already exists')
 
-    def all_doc(self):
-        status, ret = self.server._get(path=f'{self.name}/_all_doc')
+    def all_doc(self, *keys):
+        path = f'{self.name}/_all_docs'
+        if keys:
+            status, ret = self.server._post(path, data=self.server._jdump({"keys": keys}))
+        else:
+            status, ret = self.server._get(path)
         return self.server._jload(ret)
+
+    def find(self, selector=None, fields=[], sort=[], limit=25, skip=0, execution_status='true'):
+        pass
+
+    def __contains__(self, item):
+        status, ret = self.server._head(path=f'{self.name}/{item}')
+        if status == 200:
+            return True
+        else:
+            return False
 
 
 class DatabaseError(Exception):
