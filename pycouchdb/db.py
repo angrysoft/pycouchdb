@@ -24,7 +24,7 @@ class Database:
         self.name = name
 
     def insert(self, doc):
-        status, ret = self.server._post(path=self.name, data=doc)
+        status, ret = self.server.session.post(path=self.name, data=doc)
         if status in (201, 202):
             ret = self.server._jload(ret)
             return ret.get('id'), ret.get('rev')
@@ -40,16 +40,20 @@ class Database:
     def all_doc(self, *keys):
         path = f'{self.name}/_all_docs'
         if keys:
-            status, ret = self.server._post(path, data=self.server._jdump({"keys": keys}))
+            status, ret = self.server.session.post(path, data=self.server._jdump({"keys": keys}))
         else:
-            status, ret = self.server._get(path)
+            status, ret = self.server.session.get(path)
         return self.server._jload(ret)
 
     def find(self, selector=None, fields=[], sort=[], limit=25, skip=0, execution_status='true'):
-        pass
+        path = f'{self.name}/_find'
+        if selector is None:
+            status, ret = self.server.session.post(path=path)
+        else:
+            pass
 
     def __contains__(self, item):
-        status, ret = self.server._head(path=f'{self.name}/{item}')
+        status, ret = self.server.session.head(path=f'{self.name}/{item}')
         if status == 200:
             return True
         else:

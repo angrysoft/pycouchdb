@@ -19,9 +19,78 @@ import urllib.error
 from .db import Database
 
 
+class Response:
+    def __init__(self, resp):
+        self.resp = resp
+        self.body = None
+        if resp.redable:
+            self.body = resp.read()
+
+    @property
+    def code(self):
+        return self.resp.code
+
+    @property
+    def status(self):
+        return self.resp.status
+
+    def json(self):
+        try:
+            return json.loads(self.body)
+        except json.JSONDecodeError:
+            raise ServerError(self.body)
+    
+
+class Session:
+    def __init__(self, url, port):
+        self.url = f'{url}:{port}'
+
+    def get(self, path=''):
+        return self.request(method='GET', path=path)
+
+    def post(self, path='', data=None, headers={}):
+        if data:
+            data = data.encode()
+        return self.request(path, method='POST', data=data, headers=headers)
+
+    def put(self, path='', data=None, headers={}):
+        if data:
+            data = data.encode()
+        return self.request(path, method='PUT', data=data, headers=headers)
+
+    def delete(self, path):
+        return self.request(path, method='DELETE')
+
+    def head(self, path):
+        return self.request(path, method='HEAD')
+
+    def request(self, path, method='GET', data=None, headers={}):
+        req = Request(url=f'{self.url}/{path}', method=method, data=data, headers=headers)
+        try:
+            r = Response(urlopen(req))
+            return r
+        except urllib.error.HTTPError as err:
+            print(err)
+            return err.code, None
+
+    @staticmethod
+    def jload(data):
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            raise ServerError('data')
+
+    @staticmethod
+    def jdump(data):
+        try:
+            return json.dumps(data)
+        except json.JSONDecodeError:
+            raise ServerError('data')
+
+
 class Server:
     def __init__(self, url='http://localhost', port=5984):
-        self.url = f'{url}:{port}'
+        self.session = Session(url=url, port=port)
         self._version = None
         self._uuid = None
         self._vendor = None
@@ -39,33 +108,19 @@ class Server:
     def vendor(self):
         return self._vendor
 
-    @staticmethod
-    def _jload(data):
-        try:
-            return json.loads(data)
-        except json.JSONDecodeError:
-            raise ServerError('data')
-
-    @staticmethod
-    def _jdump(data):
-        try:
-            return json.dumps(data)
-        except json.JSONDecodeError:
-            raise ServerError('data')
-
     def _get_server_info(self):
-        status, ret = self._get()
+        status, ret = self.session.get()
         ret = self._jload(ret)
         self._version = ret.get('version')
         self._uuid = ret.get('uuid')
         self._vendor = ret.get('vendor')
 
     def active_tasks(self):
-        status, ret = self._get(path='_active_tasks')
+        status, ret = self.session.get(path='_active_tasks')
         return self._jload(ret)
 
     def all_dbs(self):
-        status, ret = self._get(path='_all_dbs')
+        status, ret = self.session.get(path='_all_dbs')
         return self._jload(ret)
 
     def dbs_info(self, *keys):
@@ -77,7 +132,7 @@ class Server:
         _keys = list()
         _keys.extend(keys)
         try:
-            status, ret = self._post(path='', data=json.dumps(_keys))
+            status, ret = self.session.post(path='', data=json.dumps(_keys))
             return self._jload(ret)
         except urllib.error.HTTPError:
             if self.version.startswith('1'):
@@ -99,47 +154,18 @@ class Server:
         raise NotImplemented
 
     def membership(self):
-        status, ret = self._get(path='_membership')
+        status, ret = self.session.get(path='_membership')
         return self._jload(ret)
 
-    def _get(self, path=''):
-        return self._request(method='GET', path=path)
-
-    def _post(self, path='', data=None, headers={}):
-        if data:
-            data = data.encode()
-        return self._request(path, method='POST', data=data, headers=headers)
-
-    def _put(self, path='', data=None, headers={}):
-        if data:
-            data = data.encode()
-        return self._request(path, method='PUT', data=data, headers=headers)
-
-    def _delete(self, path):
-        return self._request(path, method='DELETE')
-
-    def _head(self, path):
-        return self._request(path, method='HEAD')
-
-    def _request(self, path, method='GET', data=None, headers={}):
-        req = Request(url=f'{self.url}/{path}', method=method, data=data, headers=headers)
-        try:
-            r = urlopen(req)
-            if r.readable:
-                return r.code, r.read()
-        except urllib.error.HTTPError as err:
-            print(err)
-            return err.code, None
-
     def db(self, name):
-        status, ret = self._head(path=name)
+        status, ret = self.session.head(path=name)
         if status == 200:
             return Database(name, self)
         elif status == 404:
             raise ServerError(f'Requested database not found:  {name}')
 
     def create(self, name):
-        status, ret = self._put(path=name)
+        status, ret = self.session.put(path=name)
         if status in (201, 202):
             return self._jload(ret)
         elif status == 400:
@@ -150,7 +176,7 @@ class Server:
             raise ServerError('Precondition Failed – Database already exists')
 
     def delete(self, db_name):
-        status ,ret = self._delete(path=db_name)
+        status ,ret = self.session.delete(path=db_name)
         if status in (200, 202):
             return self._jload(ret)
         elif status == 400:
@@ -159,6 +185,20 @@ class Server:
             raise ServerError('Unauthorized – CouchDB Server Administrator privileges required')
         elif status == 404:
             raise ServerError('Not Found – Database doesn’t exist or invalid database name')
+
+    @staticmethod
+    def jload(data):
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            raise ServerError('data')
+
+    @staticmethod
+    def jdump(data):
+        try:
+            return json.dumps(data)
+        except json.JSONDecodeError:
+            raise ServerError('data')
 
 
 class ServerError(Exception):
