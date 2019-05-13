@@ -23,7 +23,7 @@ class Response:
     def __init__(self, resp):
         self.resp = resp
         self.body = None
-        if resp.redable:
+        if resp.readable:
             self.body = resp.read()
 
     @property
@@ -39,7 +39,7 @@ class Response:
             return json.loads(self.body)
         except json.JSONDecodeError:
             raise ServerError(self.body)
-    
+
 
 class Session:
     def __init__(self, url, port):
@@ -109,19 +109,19 @@ class Server:
         return self._vendor
 
     def _get_server_info(self):
-        status, ret = self.session.get()
-        ret = self._jload(ret)
+        resp = self.session.get()
+        ret = resp.json()
         self._version = ret.get('version')
         self._uuid = ret.get('uuid')
         self._vendor = ret.get('vendor')
 
     def active_tasks(self):
-        status, ret = self.session.get(path='_active_tasks')
-        return self._jload(ret)
+        resp = self.session.get(path='_active_tasks')
+        return resp.json()
 
     def all_dbs(self):
-        status, ret = self.session.get(path='_all_dbs')
-        return self._jload(ret)
+        resp = self.session.get(path='_all_dbs')
+        return resp.json()
 
     def dbs_info(self, *keys):
         """
@@ -132,8 +132,8 @@ class Server:
         _keys = list()
         _keys.extend(keys)
         try:
-            status, ret = self.session.post(path='', data=json.dumps(_keys))
-            return self._jload(ret)
+            resp = self.session.post(path='', data=json.dumps(_keys))
+            return resp.json()
         except urllib.error.HTTPError:
             if self.version.startswith('1'):
                 print('Error: minimum version server is 2.2')
@@ -154,51 +154,37 @@ class Server:
         raise NotImplemented
 
     def membership(self):
-        status, ret = self.session.get(path='_membership')
-        return self._jload(ret)
+        resp = self.session.get(path='_membership')
+        return resp.json()
 
     def db(self, name):
-        status, ret = self.session.head(path=name)
-        if status == 200:
+        resp = self.session.head(path=name)
+        if resp.code == 200:
             return Database(name, self)
-        elif status == 404:
+        elif resp.code == 404:
             raise ServerError(f'Requested database not found:  {name}')
 
     def create(self, name):
-        status, ret = self.session.put(path=name)
-        if status in (201, 202):
-            return self._jload(ret)
-        elif status == 400:
+        resp = self.session.put(path=name)
+        if resp.code in (201, 202):
+            return resp.json()
+        elif resp.code == 400:
             raise ServerError('Bad Request – Invalid database name')
-        elif status == 401:
+        elif resp.code == 401:
             raise ServerError('Unauthorized – CouchDB Server Administrator privileges required')
-        elif status == 412:
+        elif resp.code == 412:
             raise ServerError('Precondition Failed – Database already exists')
 
     def delete(self, db_name):
-        status ,ret = self.session.delete(path=db_name)
-        if status in (200, 202):
-            return self._jload(ret)
-        elif status == 400:
+        resp = self.session.delete(path=db_name)
+        if resp.code in (200, 202):
+            return resp.json()
+        elif resp.code == 400:
             raise ServerError('Bad Request – Invalid database name or forgotten document id by accident')
-        elif status == 401:
+        elif resp.code == 401:
             raise ServerError('Unauthorized – CouchDB Server Administrator privileges required')
-        elif status == 404:
+        elif resp.code == 404:
             raise ServerError('Not Found – Database doesn’t exist or invalid database name')
-
-    @staticmethod
-    def jload(data):
-        try:
-            return json.loads(data)
-        except json.JSONDecodeError:
-            raise ServerError('data')
-
-    @staticmethod
-    def jdump(data):
-        try:
-            return json.dumps(data)
-        except json.JSONDecodeError:
-            raise ServerError('data')
 
 
 class ServerError(Exception):
