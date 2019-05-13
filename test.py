@@ -6,8 +6,21 @@ s = Server()
 # print(s.version)
 # print(s.uuid)
 # print(s.vendor)
+for db in s:
+    print(db)
 print(s.all_dbs())
+
 d = s.db('devices')
-if '158d000200a020x' in d:
+print(d.all_doc('rgb01'))
+if '158d000200a020' in d:
     print('jest')
-print(d.find({'name': '...'}))
+else:
+    print('nima')
+# print(d.find({'name': '...'}))
+print(d.all_doc())
+for doc in d:
+    print(doc)
+print(d.doc('rgb01'))
+print(d['rgb01'])
+
+db = s['config']

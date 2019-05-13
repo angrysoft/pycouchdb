@@ -23,7 +23,7 @@ class Database:
         self.server = server
         self.name = name
 
-    def insert(self, doc):
+    def add(self, doc):
         resp = self.server.session.post(path=self.name, data=doc)
         if resp.code in (201, 202):
             ret = resp.json
@@ -37,30 +37,57 @@ class Database:
         elif resp.code == 409:
             raise DatabaseError('Conflict – A Conflicting Document with same ID already exists')
 
+    def doc(self, _id, attchment=False):
+        if attchment:
+            headers = {'Accept': 'multipart/related'}
+
+        resp = self.server.session.get(f'{self.name}/{_id}')
+        if resp.code in (200, 304):
+            return resp.json()
+        elif resp.code == 400:
+            raise DatabaseError('The format of the request or revision was invalid')
+        elif resp.code == 401:
+            raise DatabaseError('Read privilege required')
+        elif resp.code == 404:
+            return {}
+
     def all_doc(self, *keys):
         path = f'{self.name}/_all_docs'
+        _keys = list()
+        _keys.extend(keys)
         if keys:
-            resp = self.server.session.post(path, data=json.dumps({"keys": keys}))
+            resp = self.server.session.post(path, data={"keys": _keys})
         else:
             resp = self.server.session.get(path)
         return resp.json()
 
     def find(self, selector=None, fields=[], sort=[], limit=25, skip=0, execution_status='true'):
-        # {
-        #     "selector": {
-        #         "year": {"$gt": 2010}
-        #     },
-        #     "fields": ["_id", "_rev", "year", "title"],
-        #     "sort": [{"year": "asc"}],
-        #     "limit": 2,
-        #     "skip": 0,
-        #     "execution_stats": true
-        # }
+        raise NotImplementedError
+        test = {
+            "selector": {
+                "model": {"$eq": "plug"}
+            },
+            "fields": ["_id", "_rev", "model", "name"],
+            "sort": [{"name": "asc"}],
+            "limit": 2,
+            "skip": 0,
+            "execution_stats": True
+        }
         path = f'{self.name}/_find'
-        if selector is None:
-            status, ret = self.server.session.post(path=path)
-        else:
-            pass
+        resp = self.server.session.post(path=path, data=test)
+        if resp.code == 200:
+            return resp.json()
+        elif resp.code == 401:
+            raise DatabaseError('Read permission required')
+        elif resp.code == 500:
+            raise DatabaseError('Query execution error')
+
+    def bulk_get(self):
+        path = f'{self.name}/_bulk_get'
+        resp = self.server.session.post(path=path, data={"docs": []}, headers={'Content-Type': 'application/json'})
+        if resp.code == 200:
+            print('bulk')
+            return resp.json()
 
     def __contains__(self, item):
         resp = self.server.session.head(path=f'{self.name}/{item}')
@@ -69,12 +96,37 @@ class Database:
         else:
             return False
 
+    def __iter__(self):
+        doc = self.all_doc()
+        self.rows = doc.get('rows')
+        self.i = 0
+        return self
+
+    def __next__(self):
+        if self.i <= (len(self.rows)-1):
+            doc = self.rows[self.i]
+            self.i += 1
+            ret = self.server.session.get(f'{self.name}/{doc["id"]}')
+            return ret.json()
+        else:
+            raise StopIteration
+
+    def __getitem__(self, item):
+        return self.doc(item)
+
+    def __setitem__(self, key, value):
+        value['_id'] = key
+        self.add(value)
+
 
 class DatabaseError(Exception):
-    def __init__(self, status):
+    def __init__(self, status, code=0):
         msg = {
             400: 'Invalid database name',
             401: 'CouchDB Server Administrator privileges required',
             412: 'Database already exists'
                }
         self.message = msg.get(status, f'Unknow Error: {status}')
+
+class DocumentError(Exception):
+    pass
