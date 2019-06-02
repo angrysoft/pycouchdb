@@ -71,7 +71,7 @@ class Session:
             return r
         except urllib.error.HTTPError as err:
             print(err)
-            return err.code, None
+            return err
 
     @staticmethod
     def jload(data):

@@ -64,6 +64,7 @@ class Database:
 
     def __contains__(self, item):
         resp = self.server.session.head(path=f'{self.name}/{item}')
+        print(resp)
         if resp.code == 200:
             return True
         else:
