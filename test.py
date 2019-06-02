@@ -8,6 +8,15 @@ print(s.uuid)
 print(s.vendor)
 print(s.all_dbs())
 d = s.db('users')
-if '158d000200a020x' in d:
+
+for db in s:
+    print(db)
+print(s.all_dbs())
+if '158d000200a020' in d:
     print('jest')
-print(d.find({'name': '...'}))
+else:
+    print('nima')
+# print(d.find({'name': '...'}))
+print(d.all_doc())
+# for doc in d:
+#     print(doc)

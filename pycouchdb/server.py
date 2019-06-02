@@ -44,17 +44,26 @@ class Response:
 class Session:
     def __init__(self, url, port):
         self.url = f'{url}:{port}'
+        self.headers = {'Accept': 'application/json'}
 
     def get(self, path=''):
         return self.request(method='GET', path=path)
 
     def post(self, path='', data=None, headers={}):
-        if data:
+        if data is not None and type(data) is not str:
+            try:
+                data = json.dumps(data)
+            except json.JSONDecodeError:
+                raise ServerError(f'params parsing error {data}')
             data = data.encode()
         return self.request(path, method='POST', data=data, headers=headers)
 
     def put(self, path='', data=None, headers={}):
-        if data:
+        if data is not None and type(data) is not str:
+            try:
+                data = json.dumps(data)
+            except json.JSONDecodeError:
+                raise ServerError(f'params parsing error {data}')
             data = data.encode()
         return self.request(path, method='PUT', data=data, headers=headers)
 
@@ -65,13 +74,16 @@ class Session:
         return self.request(path, method='HEAD')
 
     def request(self, path, method='GET', data=None, headers={}):
+        headers.update(self.headers)
+        if data:
+            print(data)
+        print(headers)
         req = Request(url=f'{self.url}/{path}', method=method, data=data, headers=headers)
         try:
-            r = Response(urlopen(req))
-            return r
+            return Response(urlopen(req))
         except urllib.error.HTTPError as err:
             print(err)
-            return err
+            return Response(err)
 
     @staticmethod
     def jload(data):
@@ -86,6 +98,8 @@ class Session:
             return json.dumps(data)
         except json.JSONDecodeError:
             raise ServerError('data')
+            print('debug:', err)
+            return Response(err)
 
 
 class Server:
@@ -185,6 +199,19 @@ class Server:
             raise ServerError('Unauthorized – CouchDB Server Administrator privileges required')
         elif resp.code == 404:
             raise ServerError('Not Found – Database doesn’t exist or invalid database name')
+
+    def __iter__(self):
+        return iter(self.all_dbs())
+
+    def __getitem__(self, item):
+        return self.db(item)
+
+    def __contains__(self, item):
+        resp = self.server.session.head(path=item)
+        if resp.code == 200:
+            return True
+        else:
+            return False
 
 
 class ServerError(Exception):
