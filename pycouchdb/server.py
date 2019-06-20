@@ -44,27 +44,15 @@ class Response:
 class Session:
     def __init__(self, url, port):
         self.url = f'{url}:{port}'
-        self.headers = {'Accept': 'application/json'}
+        self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
 
     def get(self, path=''):
         return self.request(method='GET', path=path)
 
     def post(self, path='', data=None, headers={}):
-        if data is not None and type(data) is not str:
-            try:
-                data = json.dumps(data)
-            except json.JSONDecodeError:
-                raise ServerError(f'params parsing error {data}')
-            data = data.encode()
         return self.request(path, method='POST', data=data, headers=headers)
 
     def put(self, path='', data=None, headers={}):
-        if data is not None and type(data) is not str:
-            try:
-                data = json.dumps(data)
-            except json.JSONDecodeError:
-                raise ServerError(f'params parsing error {data}')
-            data = data.encode()
         return self.request(path, method='PUT', data=data, headers=headers)
 
     def delete(self, path):
@@ -75,9 +63,13 @@ class Session:
 
     def request(self, path, method='GET', data=None, headers={}):
         headers.update(self.headers)
-        if data:
-            print(data)
-        print(headers)
+        if data is not None and type(data) is not str:
+            try:
+                data = json.dumps(data)
+            except json.JSONDecodeError:
+                raise ServerError(f'params parsing error {data}')
+            data = data.encode()
+            print('data', data)
         req = Request(url=f'{self.url}/{path}', method=method, data=data, headers=headers)
         try:
             return Response(urlopen(req))
@@ -103,7 +95,7 @@ class Session:
 
 
 class Server:
-    def __init__(self, url='http://localhost', port=5984):
+    def __init__(self, url='http://localhost', port=5984, uesr=None, password=None):
         self.session = Session(url=url, port=port)
         self._version = None
         self._uuid = None
@@ -146,7 +138,7 @@ class Server:
         _keys = list()
         _keys.extend(keys)
         try:
-            resp = self.session.post(path='', data=json.dumps(_keys))
+            resp = self.session.post(path='_dbs_info', data={'keys': _keys})
             return resp.json()
         except urllib.error.HTTPError:
             if self.version.startswith('1'):

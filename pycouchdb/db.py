@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
+
 
 class Query:
     def __init__(self):
@@ -91,7 +91,6 @@ class Database:
 
     def __contains__(self, item):
         resp = self.server.session.head(path=f'{self.name}/{item}')
-        print(resp)
         if resp.code == 200:
             return True
         else:
@@ -128,6 +127,7 @@ class DatabaseError(Exception):
             412: 'Database already exists'
                }
         self.message = msg.get(status, f'Unknow Error: {status}')
+
 
 class DocumentError(Exception):
     pass
