@@ -105,9 +105,9 @@ class Database:
     def __next__(self):
         if self.i <= (len(self.rows)-1):
             doc = self.rows[self.i]
+            print(f'aaa {doc}')
             self.i += 1
-            ret = self.server.session.get(f'{self.name}/{doc["id"]}')
-            return ret.json()
+            return self[doc['id']]
         else:
             raise StopIteration
 

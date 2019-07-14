@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from urllib.request import urlopen, Request
-from urllib.parse import urlencode
+from urllib.parse import quote
 import json
 import urllib.error
 from .db import Database
@@ -68,9 +68,9 @@ class Session:
                 data = json.dumps(data)
             except json.JSONDecodeError:
                 raise ServerError(f'params parsing error {data}')
-            data = data.encode()
+            data = data.encode('utf8')
             print('data', data)
-        req = Request(url=f'{self.url}/{path}', method=method, data=data, headers=headers)
+        req = Request(url=f'{self.url}/{quote(path)}', method=method, data=data, headers=headers)
         try:
             return Response(urlopen(req))
         except urllib.error.HTTPError as err:
