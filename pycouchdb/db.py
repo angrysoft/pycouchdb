@@ -37,6 +37,34 @@ class Database:
         elif resp.code == 409:
             raise DatabaseError('Conflict – A Conflicting Document with same ID already exists')
 
+    def update(self, docid):
+        resp = self.server.session.put(path=f'{self.name}/{docid}')
+        if resp.code in (200, 202):
+            ret = resp.json
+            return ret.get('id'), ret.get('rev')
+        elif resp.code == 400:
+            raise DatabaseError('Invalid request body or parameters')
+        elif resp.code == 401:
+            raise DatabaseError('Unauthorized – Write privileges required')
+        elif resp.code == 404:
+            raise DatabaseError('Specified database or document ID doesn’t exists')
+        elif resp.code == 409:
+            raise DatabaseError('Specified revision is not the latest for target document')
+
+    def delete(self, docid):
+        resp = self.server.session.delete(path=f'{self.name}/{docid}')
+        if resp.code in (200, 202):
+            ret = resp.json
+            return ret.get('id'), ret.get('rev')
+        elif resp.code == 400:
+            raise DatabaseError('Invalid request body or parameters')
+        elif resp.code == 401:
+            raise DatabaseError('Unauthorized – Write privileges required')
+        elif resp.code == 404:
+            raise DatabaseError('Specified database or document ID doesn’t exists')
+        elif resp.code == 409:
+            raise DatabaseError('Specified revision is not the latest for target document')
+
     def doc(self, _id, attchment=False):
         if attchment:
             headers = {'Accept': 'multipart/related'}

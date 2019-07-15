@@ -70,6 +70,7 @@ class Session:
                 raise ServerError(f'params parsing error {data}')
             data = data.encode('utf8')
             print('data', data)
+        print(f'url : {self.url}/{quote(path)}')
         req = Request(url=f'{self.url}/{quote(path)}', method=method, data=data, headers=headers)
         try:
             return Response(urlopen(req))
@@ -199,7 +200,7 @@ class Server:
         return self.db(item)
 
     def __contains__(self, item):
-        resp = self.server.session.head(path=item)
+        resp = self.session.head(path=item)
         if resp.code == 200:
             return True
         else:
