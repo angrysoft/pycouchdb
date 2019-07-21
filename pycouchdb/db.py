@@ -67,7 +67,7 @@ class Database:
         elif resp.code == 401:
             raise DatabaseError('Read privilege required')
         elif resp.code == 404:
-            return {}
+            raise DatabaseError('Specified database or document ID doesn’t exists')
 
     def add(self, doc, batch=False):
         if '_id' in doc:
@@ -91,7 +91,9 @@ class Database:
             raise DatabaseError('Conflict – A Conflicting Document with same ID already exists')
 
     def update(self, docid, doc):
-        resp = self.server.session.put(path=f'{self.name}/{docid}', data=doc)
+        _doc = self.get(docid)
+        _doc.update(doc)
+        resp = self.server.session.put(path=f'{self.name}/{docid}', data=_doc, query={'rev': _doc.get('_rev')})
         if resp.code in (200, 202):
             ret = resp.json
             return ret.get('id'), ret.get('rev')

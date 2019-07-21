@@ -1,6 +1,5 @@
 #!/usr/bin/python3
-import unittest
-from pycouchdb import Server
+from pycouchdb import Server, DatabaseError
 
 
 class PyCouchdbTest():
@@ -35,6 +34,15 @@ class PyCouchdbTest():
             self.db.add(d)
             print(f'add {d}')
 
+    def test_c1_db_update(self):
+        try:
+            self.db.update('0', {'name': 'oneone'})
+            self.db['1'] = {'name': 'twotwo'}
+            self.db['123'] = {'name': 'notexists'}
+        except DatabaseError as err:
+            print(err)
+        self.test_e_list_docs()
+
     def test_d_all_docs(self):
         print(f'all docs : {self.db.all_doc()}')
 
@@ -58,5 +66,6 @@ if __name__ == '__main__':
     test.test_c_db_add()
     test.test_d_all_docs()
     test.test_e_list_docs()
+    test.test_c1_db_update()
     test.test_f_del()
     # test.tearDown()

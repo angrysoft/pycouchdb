@@ -15,4 +15,4 @@
 __all__ = ['Server', 'Database']
 
 from .server import Server
-from .db import Database
+from .db import Database, DatabaseError
