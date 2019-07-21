@@ -23,8 +23,10 @@ class Response:
     def __init__(self, resp):
         self.resp = resp
         self.body = None
+        self._headers = {}
         if resp.readable:
             self.body = resp.read()
+            self._headers = resp.headers
 
     @property
     def code(self):
@@ -34,11 +36,16 @@ class Response:
     def status(self):
         return self.resp.status
 
+    @property
     def json(self):
         try:
             return json.loads(self.body)
         except json.JSONDecodeError:
             raise ServerError(self.body)
+
+    @property
+    def headers(self):
+        return self.resp.headers
 
 
 class Session:
@@ -46,32 +53,34 @@ class Session:
         self.url = f'{url}:{port}'
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
 
-    def get(self, path=''):
-        return self.request(method='GET', path=path)
+    def get(self, path='', query={}):
+        return self.request(method='GET', path=path, query=query)
 
-    def post(self, path='', data=None, headers={}):
-        return self.request(path, method='POST', data=data, headers=headers)
+    def post(self, path='', data=None, headers={}, query={}):
+        return self.request(path, method='POST', data=data, headers=headers, query=query)
 
-    def put(self, path='', data=None, headers={}):
-        return self.request(path, method='PUT', data=data, headers=headers)
+    def put(self, path='', data=None, headers={}, query={}):
+        return self.request(path, method='PUT', data=data, headers=headers, query=query)
 
-    def delete(self, path):
-        return self.request(path, method='DELETE')
+    def delete(self, path, query={}):
+        return self.request(path, method='DELETE', query=query)
 
-    def head(self, path):
-        return self.request(path, method='HEAD')
+    def head(self, path, query={}):
+        return self.request(path, method='HEAD', query=query)
 
-    def request(self, path, method='GET', data=None, headers={}):
+    def request(self, path, method='GET', data=None, headers={}, query={}):
         headers.update(self.headers)
+        _query = '&'.join([f'{q}={query[q]}' for q in query])
         if data is not None and type(data) is not str:
             try:
                 data = json.dumps(data)
             except json.JSONDecodeError:
                 raise ServerError(f'params parsing error {data}')
             data = data.encode('utf8')
-            print('data', data)
-        print(f'url : {self.url}/{quote(path)}')
-        req = Request(url=f'{self.url}/{quote(path)}', method=method, data=data, headers=headers)
+        if query:
+            _query = f'?{_query}'
+        # print(f'{self.url}/{quote(path)}{_query}')
+        req = Request(url=f'{self.url}/{quote(path)}{_query}', method=method, data=data, headers=headers)
         try:
             return Response(urlopen(req))
         except urllib.error.HTTPError as err:
@@ -117,18 +126,18 @@ class Server:
 
     def _get_server_info(self):
         resp = self.session.get()
-        ret = resp.json()
+        ret = resp.json
         self._version = ret.get('version')
         self._uuid = ret.get('uuid')
         self._vendor = ret.get('vendor')
 
     def active_tasks(self):
         resp = self.session.get(path='_active_tasks')
-        return resp.json()
+        return resp.json
 
     def all_dbs(self):
         resp = self.session.get(path='_all_dbs')
-        return resp.json()
+        return resp.json
 
     def dbs_info(self, *keys):
         """
@@ -140,7 +149,7 @@ class Server:
         _keys.extend(keys)
         try:
             resp = self.session.post(path='_dbs_info', data={'keys': _keys})
-            return resp.json()
+            return resp.json
         except urllib.error.HTTPError:
             if self.version.startswith('1'):
                 print('Error: minimum version server is 2.2')
@@ -162,7 +171,7 @@ class Server:
 
     def membership(self):
         resp = self.session.get(path='_membership')
-        return resp.json()
+        return resp.json
 
     def db(self, name):
         resp = self.session.head(path=name)
@@ -172,9 +181,10 @@ class Server:
             raise ServerError(f'Requested database not found:  {name}')
 
     def create(self, name):
+        # TODO : name check
         resp = self.session.put(path=name)
         if resp.code in (201, 202):
-            return resp.json()
+            return resp.json
         elif resp.code == 400:
             raise ServerError('Bad Request – Invalid database name')
         elif resp.code == 401:
@@ -185,7 +195,7 @@ class Server:
     def delete(self, db_name):
         resp = self.session.delete(path=db_name)
         if resp.code in (200, 202):
-            return resp.json()
+            return resp.json
         elif resp.code == 400:
             raise ServerError('Bad Request – Invalid database name or forgotten document id by accident')
         elif resp.code == 401:

@@ -6,8 +6,22 @@ from pycouchdb import Server
 class PyCouchdbTest():
     def __init__(self):
         self.s = Server()
-        # self.s.create('testdb')
+        if 'testdb' in self.s:
+            self.s.delete('testdb')
+        self.s.create('testdb')
         self.db = self.s['testdb']
+        self.db['db_info'] = {'info': "temporary test db", 'name': 'testdb'}
+        print('doc info', self.db.doc_info('db_info'))
+        self.docs = [{'number': 1, 'name': 'one', 'type': 'number'},
+                     {'number': 2, 'name': 'two', 'type': 'number'},
+                     {'number': 3, 'name': 'three', 'type': 'number'},
+                     {'number': 4, 'name': 'four', 'type': 'number'},
+                     {'number': 5, 'name': 'five', 'type': 'number'},
+                     {'letter': 'a', 'name': 'a', 'type': 'letter'},
+                     {'letter': 'b', 'name': 'b', 'type': 'letter'},
+                     {'letter': 'c', 'name': 'c', 'type': 'letter'},
+                     {'letter': 'd', 'name': 'd', 'type': 'letter'},
+                     {'letter': 'e', 'name': 'e', 'type': 'letter'}]
 
     def test_a_server_info(self):
         print(f'Server info : {self.s.version}, {self.s.uuid}, {self.s.vendor}')
@@ -16,15 +30,10 @@ class PyCouchdbTest():
         print(f"db info : {self.s.db('testdb')}")
 
     def test_c_db_add(self):
-        docs = [{'number': 1, 'name': 'one'},
-                {'number': 2, 'name': 'two'},
-                {'number': 3, 'name': 'three'},
-                {'number': 4, 'name': 'four'},
-                {'number': 5, 'name': 'five'}]
-        for i, d in enumerate(docs):
-            print(i )
+        for i, d in enumerate(self.docs):
             d['_id'] = i
             self.db.add(d)
+            print(f'add {d}')
 
     def test_d_all_docs(self):
         print(f'all docs : {self.db.all_doc()}')
@@ -33,14 +42,10 @@ class PyCouchdbTest():
         print('doc list')
         for doc in self.db:
             print(doc)
-    #
-    # def test_check(self):
-    #     if 'damian.kozłowski@ves.pl' in self.db:
-    #         print('jest')
-    #
-    # def test_get_item(self):
-    #     print(f"get item : {self.db['sebastian.zwierzchowski@ves.pl']}")
-    #     print(f"get item : {self.db['damian.kozłowski@ves.pl']}")
+
+    def test_f_del(self):
+        for i, d in enumerate(self.docs):
+            print(f'del doc {self.db.delete(i)}')
 
     def tearDown(self):
         self.s.delete('testdb')
@@ -53,4 +58,5 @@ if __name__ == '__main__':
     test.test_c_db_add()
     test.test_d_all_docs()
     test.test_e_list_docs()
+    test.test_f_del()
     # test.tearDown()
