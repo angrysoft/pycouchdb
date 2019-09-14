@@ -79,12 +79,10 @@ class Session:
             data = data.encode('utf8')
         if query:
             _query = f'?{_query}'
-        # print(f'{self.url}/{quote(path)}{_query}')
         req = Request(url=f'{self.url}/{quote(path)}{_query}', method=method, data=data, headers=headers)
         try:
             return Response(urlopen(req))
         except urllib.error.HTTPError as err:
-            print(err)
             return Response(err)
 
     @staticmethod
@@ -100,12 +98,10 @@ class Session:
             return json.dumps(data)
         except json.JSONDecodeError:
             raise ServerError('data')
-            print('debug:', err)
-            return Response(err)
 
 
 class Server:
-    def __init__(self, url='http://localhost', port=5984, uesr=None, password=None):
+    def __init__(self, url='http://localhost', port=5984, user=None, password=None):
         self.session = Session(url=url, port=port)
         self._version = None
         self._uuid = None
