@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from urllib.request import urlopen, Request
 from urllib.parse import quote
 import json
-import urllib.error
 from .db import Database
+import http.client
 
 
 class Response:
@@ -49,9 +48,13 @@ class Response:
 
 
 class Session:
-    def __init__(self, url, port):
+    def __init__(self, url, port, ssl=None):
         self.url = f'{url}:{port}'
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+        if ssl:
+            self.conn = http.client.HTTPSConnection(url, port, timeout=2)
+        else:
+            self.conn = http.client.HTTPConnection(url, port, timeout=2)
 
     def get(self, path='', query={}):
         return self.request(method='GET', path=path, query=query)
@@ -79,13 +82,13 @@ class Session:
             data = data.encode('utf8')
         if query:
             _query = f'?{_query}'
-        # print(f'{self.url}/{quote(path)}{_query}')
-        req = Request(url=f'{self.url}/{quote(path)}{_query}', method=method, data=data, headers=headers)
-        try:
-            return Response(urlopen(req))
-        except urllib.error.HTTPError as err:
-            print(err)
-            return Response(err)
+        
+        self.conn.request(method, f'/{quote(path)}{_query}',  body=data, headers=headers)
+        return Response(self.conn.getresponse())
+
+    def __del__(self):
+        self.conn.close()
+
 
     @staticmethod
     def jload(data):
@@ -100,12 +103,10 @@ class Session:
             return json.dumps(data)
         except json.JSONDecodeError:
             raise ServerError('data')
-            print('debug:', err)
-            return Response(err)
 
 
 class Server:
-    def __init__(self, url='http://localhost', port=5984, uesr=None, password=None):
+    def __init__(self, url='localhost', port=5984, uesr=None, password=None):
         self.session = Session(url=url, port=port)
         self._version = None
         self._uuid = None
@@ -147,12 +148,8 @@ class Server:
         """
         _keys = list()
         _keys.extend(keys)
-        try:
-            resp = self.session.post(path='_dbs_info', data={'keys': _keys})
-            return resp.json
-        except urllib.error.HTTPError:
-            if self.version.startswith('1'):
-                print('Error: minimum version server is 2.2')
+        resp = self.session.post(path='_dbs_info', data={'keys': _keys})
+        return resp.json
 
     def cluster_setup(self):
         pass
@@ -167,7 +164,7 @@ class Server:
             args['heartbeat'] = heartbeat
         if since:
             args['since'] = since
-        raise NotImplemented
+        raise NotImplementedError
 
     def membership(self):
         resp = self.session.get(path='_membership')
