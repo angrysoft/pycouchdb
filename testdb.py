@@ -6,9 +6,13 @@ class PyCouchdbTest():
     def __init__(self):
         self.s = Server()
         if 'testdb' in self.s:
+            print('remove testdb')
             self.s.delete('testdb')
+        print('create testdb')
         self.s.create('testdb')
-        self.db = self.s['testdb']
+        print('db created')
+        print('accesing db')
+        self.db = self.s.db('testdb')
         self.db['db_info'] = {'info': "temporary test db", 'name': 'testdb'}
         print('doc info', self.db.doc_info('db_info'))
         self.docs = [{'number': 1, 'name': 'one', 'type': 'number'},
@@ -42,6 +46,9 @@ class PyCouchdbTest():
         except DatabaseError as err:
             print(err)
         self.test_e_list_docs()
+    
+    def test_c2_db_get(self):
+        print('get name: ', self.db['0']['name'])
 
     def test_d_all_docs(self):
         print(f'all docs : {self.db.all_doc()}')
@@ -67,5 +74,6 @@ if __name__ == '__main__':
     test.test_d_all_docs()
     test.test_e_list_docs()
     test.test_c1_db_update()
+    test.test_c2_db_get()
     test.test_f_del()
-    # test.tearDown()
+    test.tearDown()

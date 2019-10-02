@@ -49,7 +49,6 @@ class Response:
 
 class Session:
     def __init__(self, url, port, ssl=None):
-        self.url = f'{url}:{port}'
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
         if ssl:
             self.conn = http.client.HTTPSConnection(url, port, timeout=2)
@@ -89,7 +88,6 @@ class Session:
     def __del__(self):
         self.conn.close()
 
-
     @staticmethod
     def jload(data):
         try:
@@ -106,8 +104,8 @@ class Session:
 
 
 class Server:
-    def __init__(self, url='localhost', port=5984, uesr=None, password=None):
-        self.session = Session(url=url, port=port)
+    def __init__(self, url='localhost', port=5984, uesr=None, password=None, ssl=None):
+        self.session = Session(url=url, port=port, ssl=ssl)
         self._version = None
         self._uuid = None
         self._vendor = None
