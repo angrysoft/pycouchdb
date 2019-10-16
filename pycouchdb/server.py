@@ -16,6 +16,10 @@ from urllib.parse import quote
 import json
 from .db import Database
 import http.client
+import socket
+import errno
+from time import sleep
+from threading import RLock
 
 
 class Response:
@@ -48,12 +52,25 @@ class Response:
 
 
 class Session:
-    def __init__(self, url, port, ssl=None):
+    def __init__(self, url, port, ssl=None, timeout=5):
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-        if ssl:
-            self.conn = http.client.HTTPSConnection(url, port, timeout=2)
+        self.url = url
+        self.port = port
+        self.timeout = timeout
+        self.lock = RLock()
+        self.ssl = ssl
+        self.conn = None
+        self.retry = 5
+        self._open_connection()
+        self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
+                                 errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
+                                 errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
+        
+    def _open_connection(self):
+        if self.ssl:
+            self.conn = http.client.HTTPSConnection(self.url, self.port, timeout=self.timeout)
         else:
-            self.conn = http.client.HTTPConnection(url, port, timeout=2)
+            self.conn = http.client.HTTPConnection(self.url, self.port, timeout=self.timeout)
 
     def get(self, path='', query={}):
         return self.request(method='GET', path=path, query=query)
@@ -81,12 +98,31 @@ class Session:
             data = data.encode('utf8')
         if query:
             _query = f'?{_query}'
-        
-        self.conn.request(method, f'/{quote(path)}{_query}',  body=data, headers=headers)
+
+        for x in range(1, self.retry):
+            if self._send(method, f'/{quote(path)}{_query}',  data, headers):
+                break
         return Response(self.conn.getresponse())
 
+    def _send(self, method, url, body, headers):
+        try:
+            with self.lock:
+                self.conn.request(method, url,  body=body, headers=headers)
+                return True
+        except socket.error as err:
+            if err.args[0] in self.errors_retryable:
+                self._open_connection()
+                return False
+            else:
+                print(err)
+        except http.client.CannotSendRequest as cserr:
+            print(cserr)
+            self._open_connection()
+
+
     def __del__(self):
-        self.conn.close()
+        if self.conn:
+            self.conn.close()
 
     @staticmethod
     def jload(data):
@@ -109,7 +145,7 @@ class Server:
         self._version = None
         self._uuid = None
         self._vendor = None
-        self._get_server_info()
+        # self._get_server_info()
 
     @property
     def version(self):

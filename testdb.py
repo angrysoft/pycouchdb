@@ -57,6 +57,8 @@ class PyCouchdbTest():
         print('doc list')
         for doc in self.db:
             print(doc)
+        device_data = [d for d in self.s['devices-data']]
+        print(device_data)
 
     def test_f_del(self):
         for i, d in enumerate(self.docs):
