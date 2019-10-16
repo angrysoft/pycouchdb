@@ -35,6 +35,6 @@ if __name__ == '__main__':
     # sleep(1)
     add_t = timeit.timeit(test.test_c_db_add, number=1)
     # del_t = timeit.timeit(test.test_f_del, number=1)
-    print(f'Add time : {add_t}')
+    print(f'Add {test._to} in : {add_t}')
     # print(f'Del time : {del_t}')
     # test.tearDown()

@@ -50,7 +50,7 @@ class Response:
     def headers(self):
         return self.resp.headers
 
-
+# TODO auth , connectionpool ?
 class Session:
     def __init__(self, url, port, ssl=None, timeout=5):
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
@@ -61,7 +61,7 @@ class Session:
         self.ssl = ssl
         self.conn = None
         self.retry = 5
-        self._open_connection()
+        # self._open_connection()
         self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
                                  errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
                                  errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
@@ -102,12 +102,16 @@ class Session:
         for x in range(1, self.retry):
             if self._send(method, f'/{quote(path)}{_query}',  data, headers):
                 break
-        return Response(self.conn.getresponse())
+        ret = Response(self.conn.getresponse())
+        self.conn.close()
+        return ret
 
     def _send(self, method, url, body, headers):
         try:
             with self.lock:
+                self._open_connection()
                 self.conn.request(method, url,  body=body, headers=headers)
+                
                 return True
         except socket.error as err:
             if err.args[0] in self.errors_retryable:
