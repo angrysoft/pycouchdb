@@ -60,6 +60,7 @@ class Session:
         self.lock = RLock()
         self.ssl = ssl
         self.conn = None
+        self.connections = ConnectionPool()
         self.retry = 5
         # self._open_connection()
         self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
@@ -141,6 +142,10 @@ class Session:
             return json.dumps(data)
         except json.JSONDecodeError:
             raise ServerError('data')
+
+class ConnectionPool:
+    def __init__(self):
+        pass
 
 
 class Server:
