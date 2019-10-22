@@ -16,7 +16,12 @@ class PyCouchdbTest():
     def test_c_db_add(self):
         for i in range(0, self._to):
             doc = {'_id': str(i), 'number': 1, 'name': 'one', 'type': 'number'}
-            self.db.save(doc) 
+            self.db.save(doc)
+    
+    def test_d_db_get(self):
+        ret = list()
+        for i in range(0, self._to):
+            ret.append(self.db[str(i)])
 
     def test_f_del(self):
         for i in range(0, self._to):
@@ -34,6 +39,8 @@ if __name__ == '__main__':
     # from time import sleep
     # sleep(1)
     add_t = timeit.timeit(test.test_c_db_add, number=1)
+    get_t = timeit.timeit(test.test_d_db_get, number=1)
     # del_t = timeit.timeit(test.test_f_del, number=1)
     print(f'Add {test._to} in : {add_t}')
+    print(f'Get {test._to} in : {get_t}')
     # print(f'Del time : {del_t}')

@@ -17,9 +17,8 @@ from urllib.request import urlopen, Request
 import urllib.error
 import json
 from .db import Database
-import http.client
-import socket
-import errno
+# import socket
+# import errno
 from time import sleep
 from threading import RLock
 import asyncio
@@ -28,7 +27,6 @@ import asyncio
 class Response:
     def __init__(self, resp):
         self.resp = resp
-        self.body = None
         self._headers = {}
         if resp.readable:
             self.body = resp.read()
@@ -53,29 +51,24 @@ class Response:
     def headers(self):
         return self.resp.headers
 
+
 # TODO auth , connectionpool ?
 class Session:
-    def __init__(self, url, port, ssl=None, timeout=5):
+    def __init__(self, url, port, ssl=None, timeout=5, user=None, password=None):
+        if user and password:
+            pass
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-        # self.url = url
         self.url = f'{url}:{port}'
         self.port = port
         self.timeout = timeout
         self.lock = RLock()
         self.ssl = ssl
-        self.conn = None
-        # self.connections = ConnectionPool(url, port, timeout=timeout)
-        self.retry = 5
-        self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
-                                 errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
-                                 errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
         
-    def _open_connection(self):
-        if self.ssl:
-            self.conn = http.client.HTTPSConnection
-        else:
-            self.conn = http.client.HTTPConnection
-
+            
+        # self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
+        #                          errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
+        #                          errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
+    
     def get(self, path='', query={}):
         return self.request(method='GET', path=path, query=query)
 
@@ -110,78 +103,9 @@ class Session:
             except urllib.error.HTTPError as err:
                 return Response(err)
 
-        # with self.lock:
-        # with self.conn(self.url, self.port, timeout=self.timeout) as _conn:
-        #     _conn.request(method, f'/{quote(path)}{_query}',  body=data, headers=headers)
-        #     return Response(_conn.getresponse())
-        # except socket.error as err:
-            # print(err)
-            # except http.client.CannotSendRequest:
-                # self.conn.close()
-                # self._open_connection()
-                # TODO aaaaa fuck
-
-
-    def _send(self, method, url, body, headers):
-        try:
-            # with self.lock:
-                # self._open_connection()
-            self.conn.request(method, url,  body=body, headers=headers)
-                
-            return True
-        except socket.error as err:
-            if err.args[0] in self.errors_retryable:
-                return False
-            else:
-                print(err)
-        except http.client.CannotSendRequest as cserr:
-            print(f'err: {cserr}')
-
-    def __del__(self):
-        if self.conn:
-            self.conn.close()
-
-    @staticmethod
-    def jload(data):
-        try:
-            return json.loads(data)
-        except json.JSONDecodeError:
-            raise ServerError('data')
-
-    @staticmethod
-    def jdump(data):
-        try:
-            return json.dumps(data)
-        except json.JSONDecodeError:
-            raise ServerError('data')
-
-# class ConnectionPool:
-#     def __init__(self, url, port, timeout=5, ssl=False, npools=3):
-#         self._conns = None
-#         self.url = url
-#         self.port = port
-#         self.npools = npools
-#         self.timeout = timeout
-#         self.ssl = ssl
-    
-#     def restore_connections(self):
-#         while len(self._conns) < self.npools:
-#             if self.ssl:
-#                 conn = http.client.HTTPSConnection(self.url, self.port, timeout=self.timeout)
-#             else:
-#                 conn = http.client.HTTPConnection(self.url, self.port, timeout=self.timeout)
-#             self._conns.append(conn)
-    
-#     def get(self):
-#         if not self._conns:
-#             asyncio.run(self.restore_connections())
-#         return self._conns
-    
-
-
 class Server:
-    def __init__(self, url='http://localhost', port=5984, uesr=None, password=None, ssl=None):
-        self.session = Session(url=url, port=port, ssl=ssl)
+    def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
+        self.session = Session(url=url, port=port, ssl=ssl, user=user, password=password)
         self._version = None
         self._uuid = None
         self._vendor = None
@@ -214,7 +138,7 @@ class Server:
         resp = self.session.get(path='_all_dbs')
         return resp.json
 
-    def dbs_info(self, *keys):
+    def dbs_info(self, *keys) -> list:
         """
         Returns information of a list of the specified databases in the CouchDB instance
         :param keys
