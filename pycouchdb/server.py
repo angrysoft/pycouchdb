@@ -13,6 +13,8 @@
 # limitations under the License.
 
 from urllib.parse import quote
+from urllib.request import urlopen, Request
+import urllib.error
 import json
 from .db import Database
 import http.client
@@ -20,6 +22,7 @@ import socket
 import errno
 from time import sleep
 from threading import RLock
+import asyncio
 
 
 class Response:
@@ -54,24 +57,24 @@ class Response:
 class Session:
     def __init__(self, url, port, ssl=None, timeout=5):
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-        self.url = url
+        # self.url = url
+        self.url = f'{url}:{port}'
         self.port = port
         self.timeout = timeout
         self.lock = RLock()
         self.ssl = ssl
         self.conn = None
-        self.connections = ConnectionPool()
+        # self.connections = ConnectionPool(url, port, timeout=timeout)
         self.retry = 5
-        # self._open_connection()
         self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
                                  errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
                                  errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
         
     def _open_connection(self):
         if self.ssl:
-            self.conn = http.client.HTTPSConnection(self.url, self.port, timeout=self.timeout)
+            self.conn = http.client.HTTPSConnection
         else:
-            self.conn = http.client.HTTPConnection(self.url, self.port, timeout=self.timeout)
+            self.conn = http.client.HTTPConnection
 
     def get(self, path='', query={}):
         return self.request(method='GET', path=path, query=query)
@@ -99,31 +102,40 @@ class Session:
             data = data.encode('utf8')
         if query:
             _query = f'?{_query}'
+            
+        req = Request(url=f'{self.url}/{quote(path)}{_query}', method=method, data=data, headers=headers)
+        with self.lock:    
+            try:
+                return Response(urlopen(req))
+            except urllib.error.HTTPError as err:
+                return Response(err)
 
-        for x in range(1, self.retry):
-            if self._send(method, f'/{quote(path)}{_query}',  data, headers):
-                break
-        ret = Response(self.conn.getresponse())
-        self.conn.close()
-        return ret
+        # with self.lock:
+        # with self.conn(self.url, self.port, timeout=self.timeout) as _conn:
+        #     _conn.request(method, f'/{quote(path)}{_query}',  body=data, headers=headers)
+        #     return Response(_conn.getresponse())
+        # except socket.error as err:
+            # print(err)
+            # except http.client.CannotSendRequest:
+                # self.conn.close()
+                # self._open_connection()
+                # TODO aaaaa fuck
+
 
     def _send(self, method, url, body, headers):
         try:
-            with self.lock:
-                self._open_connection()
-                self.conn.request(method, url,  body=body, headers=headers)
+            # with self.lock:
+                # self._open_connection()
+            self.conn.request(method, url,  body=body, headers=headers)
                 
-                return True
+            return True
         except socket.error as err:
             if err.args[0] in self.errors_retryable:
-                self._open_connection()
                 return False
             else:
                 print(err)
         except http.client.CannotSendRequest as cserr:
-            print(cserr)
-            self._open_connection()
-
+            print(f'err: {cserr}')
 
     def __del__(self):
         if self.conn:
@@ -143,13 +155,32 @@ class Session:
         except json.JSONDecodeError:
             raise ServerError('data')
 
-class ConnectionPool:
-    def __init__(self):
-        pass
+# class ConnectionPool:
+#     def __init__(self, url, port, timeout=5, ssl=False, npools=3):
+#         self._conns = None
+#         self.url = url
+#         self.port = port
+#         self.npools = npools
+#         self.timeout = timeout
+#         self.ssl = ssl
+    
+#     def restore_connections(self):
+#         while len(self._conns) < self.npools:
+#             if self.ssl:
+#                 conn = http.client.HTTPSConnection(self.url, self.port, timeout=self.timeout)
+#             else:
+#                 conn = http.client.HTTPConnection(self.url, self.port, timeout=self.timeout)
+#             self._conns.append(conn)
+    
+#     def get(self):
+#         if not self._conns:
+#             asyncio.run(self.restore_connections())
+#         return self._conns
+    
 
 
 class Server:
-    def __init__(self, url='localhost', port=5984, uesr=None, password=None, ssl=None):
+    def __init__(self, url='http://localhost', port=5984, uesr=None, password=None, ssl=None):
         self.session = Session(url=url, port=port, ssl=ssl)
         self._version = None
         self._uuid = None
