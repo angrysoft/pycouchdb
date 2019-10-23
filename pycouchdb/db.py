@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from .doc import Document
 
 class Query:
     class Selector:
@@ -134,7 +134,7 @@ class Database:
         elif resp.code == 409:
             raise DatabaseError('Specified revision is not the latest for target document')
 
-    def all_doc(self, *keys):
+    def all_docs(self, *keys):
         path = f'{self.name}/_all_docs'
         _keys = list()
         _keys.extend(keys)
@@ -174,9 +174,25 @@ class Database:
     def query(self):
         pass
     
-    def bulk_get(self):
+    def bulk_add(self, *docs):
+        docs = {'docs': list()}
+        
+        for doc in docs:
+            if isinstance(doc, Document):
+                docs['docs'].append()
+            elif type(doc) == dict:
+                docs['docs'].append(doc)
+        
+    
+    def bulk_get(self, *ids):
+        docs = {'docs': list()}
+        for _id in ids:
+            if type(_id) == dict:
+                docs['docs'].append(_id)
+            elif type(_id) == str:
+                docs['docs'].append({'id': _id})
         path = f'{self.name}/_bulk_get'
-        resp = self.server.session.post(path=path, data={"docs": []}, headers={'Content-Type': 'application/json'})
+        resp = self.server.session.post(path=path, data=docs)
         if resp.code == 200:
             print('bulk')
             return resp.json
@@ -199,7 +215,7 @@ class Database:
             return False
 
     def __iter__(self):
-        doc = self.all_doc()
+        doc = self.all_docs()
         self.rows = doc.get('rows')
         self.i = 0
         return self

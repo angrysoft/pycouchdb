@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['Server', 'Database']
+__all__ = ['Server', 'Database', 'Document']
 
 from .server import Server
 from .db import Database, DatabaseError
+from .doc import Document

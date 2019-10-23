@@ -69,8 +69,6 @@ class Session:
         if self.user and self.password:
             self.headers['Authorization'] = f"Basic {b64encode(f'{self.user}:{self.password}'.encode('utf-8')).decode('ascii')}"
         
-        print(self.headers)
-        
     def get(self, path='', query={}):
         return self.request(method='GET', path=path, query=query)
 

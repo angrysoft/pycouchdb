@@ -17,27 +17,25 @@ class MetaDocument(type):
 class Document(metaclass=MetaDocument):
     _id = None
     _rev = None
+    _doc = dict()
 
     def __init__(self, **kwargs):
         self.update(kwargs)
 
     @classmethod
     def __str__(cls):
-        return str(cls.doc)
+        return str(cls._doc)
 
     @classmethod
     def update(cls, _doc):
         if type(_doc) is not dict:
             raise ValueError('_doc should by a dict')
         for key in _doc:
-            if key in cls.doc:
-                cls.doc[key] = _doc[key]
-            else:
-                raise KeyError(f'{key} not in model')
+            cls._doc[key] = _doc[key]
 
     @property
     def json(self):
-        return json.dumps(self.doc)
+        return json.dumps(self._doc)
 
     @json.setter
     def json(self, value):
@@ -47,7 +45,4 @@ class Document(metaclass=MetaDocument):
         return getattr(self, key)
 
     def __setitem__(self, key, value):
-        if key in self.doc:
-            self.doc[key] = value
-        else:
-            raise KeyError(f'{key} not in model')
+            self._doc[key] = value
