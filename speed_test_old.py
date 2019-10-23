@@ -20,7 +20,7 @@ class PyCouchdbTest():
     
     def test_d_db_get(self):
         ret = list()
-        for i in range(0, self._to):
+        for i in range(0, self._to+1):
             ret.append(self.db[str(i)])
 
     def test_f_del(self):

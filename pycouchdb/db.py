@@ -14,8 +14,21 @@
 
 
 class Query:
-    def __init__(self):
+    class Selector:
+        def __init__(self, filed):
+            pass
+    
+    class Fields:
         pass
+
+    class Sort:
+        pass
+
+    def __init__(self):
+        self._selector = Selector
+        self._selector = {}
+        self._fileds = []
+        self._sort = []
 
 
 class Database:
@@ -131,27 +144,36 @@ class Database:
             resp = self.server.session.get(path)
         return resp.json
 
-    def find(self, selector=None, fields=[], sort=[], limit=25, skip=0, execution_status='true'):
-        raise NotImplementedError
-        test = {
-            "selector": {
-                "model": {"$eq": "plug"}
-            },
-            "fields": ["_id", "_rev", "model", "name"],
-            "sort": [{"name": "asc"}],
-            "limit": 2,
-            "skip": 0,
-            "execution_stats": True
+    def find(self, selector={}, fields=[], sort=[], limit=25, skip=0, execution_status=False):
+        query = {
+            'selector': selector,
         }
+        if fields:
+            query['fileds'] = fields
+        
+        if sort:
+            query['sort'] = sort
+        
+        query['limit'] = limit # defautl 25
+        
+        if skip:
+            query['skip'] = skip
+        
+        if execution_status:
+            query['execution_status'] = True
+            
         path = f'{self.name}/_find'
-        resp = self.server.session.post(path=path, data=test)
+        resp = self.server.session.post(path=path, data=query)
         if resp.code == 200:
             return resp.json
         elif resp.code == 401:
             raise DatabaseError('Read permission required')
         elif resp.code == 500:
             raise DatabaseError('Query execution error')
-
+    
+    def query(self):
+        pass
+    
     def bulk_get(self):
         path = f'{self.name}/_bulk_get'
         resp = self.server.session.post(path=path, data={"docs": []}, headers={'Content-Type': 'application/json'})

@@ -4,7 +4,7 @@ from pycouchdb import Server, DatabaseError
 
 class PyCouchdbTest():
     def __init__(self):
-        self.s = Server()
+        self.s = Server(user='admin', password='admin')
         if 'testdb' in self.s:
             print('remove testdb')
             self.s.delete('testdb')
@@ -59,6 +59,9 @@ class PyCouchdbTest():
             print(doc)
         device_data = [d for d in self.s['devices-data']]
         print(device_data)
+    
+    def test_f_find(self):
+        print(f"Find: {self.db.find(selector={'type': 'number'})}")
 
     def test_f_del(self):
         for i, d in enumerate(self.docs):
@@ -77,5 +80,6 @@ if __name__ == '__main__':
     test.test_e_list_docs()
     test.test_c1_db_update()
     test.test_c2_db_get()
+    test.test_f_find()
     test.test_f_del()
     test.tearDown()

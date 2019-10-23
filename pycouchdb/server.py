@@ -15,13 +15,10 @@
 from urllib.parse import quote
 from urllib.request import urlopen, Request
 import urllib.error
+from base64 import b64encode
 import json
 from .db import Database
-# import socket
-# import errno
-from time import sleep
 from threading import RLock
-import asyncio
 
 
 class Response:
@@ -63,12 +60,17 @@ class Session:
         self.timeout = timeout
         self.lock = RLock()
         self.ssl = ssl
-        
-            
+        self.user = user
+        self.password = password
         # self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
         #                          errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
         #                          errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
     
+        if self.user and self.password:
+            self.headers['Authorization'] = f"Basic {b64encode(f'{self.user}:{self.password}'.encode('utf-8')).decode('ascii')}"
+        
+        print(self.headers)
+        
     def get(self, path='', query={}):
         return self.request(method='GET', path=path, query=query)
 
@@ -102,6 +104,7 @@ class Session:
                 return Response(urlopen(req))
             except urllib.error.HTTPError as err:
                 return Response(err)
+       
 
 class Server:
     def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
@@ -109,7 +112,7 @@ class Server:
         self._version = None
         self._uuid = None
         self._vendor = None
-        # self._get_server_info()
+        self._get_server_info()
 
     @property
     def version(self):

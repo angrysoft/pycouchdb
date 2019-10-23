@@ -12,7 +12,6 @@ class PyCouchdbTest():
         self.db = self.s['speedtestdb']
         self.doc = {'number': 1, 'name': 'one', 'type': 'number'}
         self._to = 500
-        print(self.s.dbs_info())
 
     def test_c_db_add(self):
         for i in range(0, self._to):
