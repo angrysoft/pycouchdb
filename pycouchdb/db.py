@@ -72,7 +72,7 @@ class Database:
                        'Accept': 'multipart/mixed'}
             _query['attachments'] =  'true'
         
-        if att_encodig_info:
+        if att_encoding_info:
             _query['att_encoding_info'] = 'true'
         
         
