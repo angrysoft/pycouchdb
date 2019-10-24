@@ -82,24 +82,34 @@ class PyCouchdbTestBulk(unittest.TestCase):
         print('accesing db')
         cls.db = cls.s.db('testdb')
         
-        cls.docs = [{'number': 1, 'name': 'one', 'type': 'number'},
-                     {'number': 2, 'name': 'two', 'type': 'number'},
-                     {'number': 3, 'name': 'three', 'type': 'number'},
-                     {'number': 4, 'name': 'four', 'type': 'number'},
-                     {'number': 5, 'name': 'five', 'type': 'number'},
-                     {'letter': 'a', 'name': 'a', 'type': 'letter'},
-                     {'letter': 'b', 'name': 'b', 'type': 'letter'},
-                     {'letter': 'c', 'name': 'c', 'type': 'letter'},
-                     {'letter': 'd', 'name': 'd', 'type': 'letter'},
-                     {'letter': 'e', 'name': 'e', 'type': 'letter'}]
+        cls.docs = [{'_id':'0', 'number': 1, 'name': 'one', 'type': 'number'},
+                    {'_id':'1', 'number': 2, 'name': 'two', 'type': 'number'},
+                    {'_id':'2', 'number': 3, 'name': 'three', 'type': 'number'},
+                    {'_id':'3', 'number': 4, 'name': 'four', 'type': 'number'},
+                    {'_id':'4', 'number': 5, 'name': 'five', 'type': 'number'},
+                    {'_id':'5', 'letter': 'a', 'name': 'a', 'type': 'letter'},
+                    {'_id':'6', 'letter': 'b', 'name': 'b', 'type': 'letter'},
+                    {'_id':'7', 'letter': 'c', 'name': 'c', 'type': 'letter'},
+                    {'_id':'8', 'letter': 'd', 'name': 'd', 'type': 'letter'},
+                    {'_id':'9', 'letter': 'e', 'name': 'e', 'type': 'letter'}]
     
     def test_a_bulk_add(self):
-        pass
+        print('\nBulk add docs')
+        print(self.db.bulk_add(self.docs))
     
     def test_b_bulk_get(self):
-        pass
+         print('\nBulk get docs')
+         print(self.db.bulk_get([str(x) for x in range(0,10)]))
     
-    def test_c_bulk_del(self):
+    def test_c_bule_update(self):
+        print('\nBulk update docs')
+        docs = self.db.bulk_get([str(x) for x in range(0,10)])
+        for i, x in enumerate(docs):
+            print(i,x)
+            
+        # print(self.db.bulk_update(docs))
+        
+    def test_d_bulk_del(self):
         pass
         
 if __name__ == '__main__':

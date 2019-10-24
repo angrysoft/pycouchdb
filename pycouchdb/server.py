@@ -173,32 +173,24 @@ class Server:
         resp = self.session.head(path=name)
         if resp.code == 200:
             return Database(name, self)
-        elif resp.code == 404:
-            raise ServerError(f'Requested database not found:  {name}')
+        else:
+            raise ServerError(resp.code)
 
     def create(self, name):
         # TODO : name check
         resp = self.session.put(path=name)
         if resp.code in (201, 202):
             return resp.json
-        elif resp.code == 400:
-            raise ServerError('Bad Request – Invalid database name')
-        elif resp.code == 401:
-            raise ServerError('Unauthorized – CouchDB Server Administrator privileges required')
-        elif resp.code == 412:
-            raise ServerError('Precondition Failed – Database already exists')
+        else:
+            raise ServerError(resp.code)
 
     def delete(self, db_name):
         resp = self.session.delete(path=db_name)
         if resp.code in (200, 202):
             return resp.json
-        elif resp.code == 400:
-            raise ServerError('Bad Request – Invalid database name or forgotten document id by accident')
-        elif resp.code == 401:
-            raise ServerError('Unauthorized – CouchDB Server Administrator privileges required')
-        elif resp.code == 404:
-            raise ServerError('Not Found – Database doesn’t exist or invalid database name')
-
+        else:
+            raise ServerError(resp.code)
+        
     def __iter__(self):
         return iter(self.all_dbs())
 
@@ -214,5 +206,14 @@ class Server:
 
 
 class ServerError(Exception):
-    pass
+    _codes = {
+        400: 'Invalid database name',
+        401: 'CouchDB Server Administrator privileges required',
+        404: 'Requested database not found',
+        412: 'Database already exists'
+        }
+    
+    def __init__(self, code=0, messeage=f'Unknow Error'):
+        self.message = self._codes.get(code, messeage)    
+        
 

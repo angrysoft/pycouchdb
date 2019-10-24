@@ -6,4 +6,4 @@ import json
 doc = Document()
 doc['dupa'] = 'blada'
 print(doc)
-print(json.dumps(doc))
+print(doc.json)

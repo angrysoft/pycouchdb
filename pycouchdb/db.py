@@ -43,14 +43,10 @@ class Database:
             return {'rev': resp.headers.get('ETag', '').strip('"'),
                     'size': resp.headers.get('Content-Length'),
                     'date': resp.headers.get('Date')}
-        elif resp.code == 401:
-            raise DatabaseError('Unauthorized – Write privileges required')
-        elif resp.code == 404:
-            raise DatabaseError('Specified database or document ID doesn’t exists')
         else:
-            return {}
+            raise DatabaseError(resp.code)
 
-    def get(self, _id, attchments=False):
+    def get(self, _id, attchments=False, att_encoding_info=False):
         # TODO query options
         # attachments(boolean) – Includes attachments bodies in response.Default is false
         # att_encoding_info(boolean) – Includes encoding
@@ -68,19 +64,27 @@ class Database:
         # rev(string) – Retrieves document of specified revision.Optional
         # revs(boolean) – Includes list of all known document revisions.Default is false
         # revs_info(boolean) – Includes detailed information for all known document revisions.Default is false
-
+        
+        _query = {}
+        
         if attchments:
-            headers = {'Accept': 'multipart/related'}
-
-        resp = self.server.session.get(f'{self.name}/{_id}')
+            headers = {'Accept': 'multipart/related',
+                       'Accept': 'multipart/mixed'}
+            _query['attachments'] =  'true'
+        
+        if att_encodig_info:
+            _query['att_encoding_info'] = 'true'
+        
+        
+        resp = self.server.session.get(f'{self.name}/{_id}', query=_query)
         if resp.code in (200, 304):
             return resp.json
         elif resp.code == 400:
-            raise DatabaseError('The format of the request or revision was invalid')
-        elif resp.code == 401:
-            raise DatabaseError('Read privilege required')
+            raise DatabaseError(messeage='The format of the request or revision was invalid')
         elif resp.code == 404:
             raise DatabaseError('Specified database or document ID doesn’t exists')
+        else:
+            raise DatabaseError(resp.code)
 
     def add(self, doc, batch=False):
         if '_id' in doc:
@@ -94,14 +98,8 @@ class Database:
         if resp.code in (201, 202):
             ret = resp.json
             return ret.get('id'), ret.get('rev')
-        elif resp.code == 400:
-            raise DatabaseError('Bad Request – Invalid database name')
-        elif resp.code == 401:
-            raise DatabaseError('Unauthorized – Write privileges required')
-        elif resp.code == 404:
-            raise DatabaseError('Not Found – Database doesn’t exist')
-        elif resp.code == 409:
-            raise DatabaseError('Conflict – A Conflicting Document with same ID already exists')
+        else:
+            raise DatabaseError(resp.code)
 
     def update(self, docid, doc):
         _doc = self.get(docid)
@@ -111,13 +109,13 @@ class Database:
             ret = resp.json
             return ret.get('id'), ret.get('rev')
         elif resp.code == 400:
-            raise DatabaseError('Invalid request body or parameters')
-        elif resp.code == 401:
-            raise DatabaseError('Unauthorized – Write privileges required')
+            raise DatabaseError(messeage='Invalid request body or parameters')
         elif resp.code == 404:
-            raise DatabaseError('Specified database or document ID doesn’t exists')
+            raise DatabaseError(messeage='Specified database or document ID doesn’t exists')
         elif resp.code == 409:
-            raise DatabaseError('Specified revision is not the latest for target document')
+            raise DatabaseError(messeage='Specified revision is not the latest for target document')
+        else:
+            raise DatabaseError(resp.code)
 
     def delete(self, docid):
         info = self.doc_info(docid)
@@ -126,13 +124,13 @@ class Database:
             ret = resp.json
             return ret.get('id'), ret.get('rev')
         elif resp.code == 400:
-            raise DatabaseError('Invalid request body or parameters')
-        elif resp.code == 401:
-            raise DatabaseError('Unauthorized – Write privileges required')
+            raise DatabaseError(messeage='Invalid request body or parameters')
         elif resp.code == 404:
-            raise DatabaseError('Specified database or document ID doesn’t exists')
+            raise DatabaseError(messeage='Specified database or document ID doesn’t exists')
         elif resp.code == 409:
-            raise DatabaseError('Specified revision is not the latest for target document')
+            raise DatabaseError(messeage='Specified revision is not the latest for target document')
+        else:
+            raise DatabaseError(resp.code)
 
     def all_docs(self, *keys):
         path = f'{self.name}/_all_docs'
@@ -166,36 +164,76 @@ class Database:
         resp = self.server.session.post(path=path, data=query)
         if resp.code == 200:
             return resp.json
-        elif resp.code == 401:
-            raise DatabaseError('Read permission required')
-        elif resp.code == 500:
-            raise DatabaseError('Query execution error')
+        elif resp.code == 400:
+            raise DatabaseError(messeage='Invalid request')
+        else:
+            raise DatabaseError(resp.code)
     
     def query(self):
         pass
     
-    def bulk_add(self, *docs):
-        docs = {'docs': list()}
+    def bulk_add(self, docs_list):
+        if type(docs_list) is not list:
+            raise ValueError(f'args List expected not {type(docs_list)}')
+            
+        docs = {'docs': docs_list}
         
-        for doc in docs:
-            if isinstance(doc, Document):
-                docs['docs'].append()
-            elif type(doc) == dict:
-                docs['docs'].append(doc)
+        # for doc in docs:
+        #     if isinstance(doc, Document):
+        #         docs['docs'].append()
+        #     elif type(doc) == dict:
+        #         docs['docs'].append(doc)
+        path = f'{self.name}/_bulk_docs'
+        resp = self.server.session.post(path=path, data=docs)
+        if resp.code == 201:
+            return resp.json
+        elif resp.code == 400:
+            raise DatabaseError(messeage='The request provided invalid JSON data')
+        else:
+            raise DatabaseError(resp.code)
         
     
-    def bulk_get(self, *ids):
+    def bulk_get(self, id_list):
+        if type(id_list) is not list:
+            raise ValueError(f'args List expected not {type(id_list)}')
         docs = {'docs': list()}
-        for _id in ids:
+        for _id in id_list:
             if type(_id) == dict:
                 docs['docs'].append(_id)
             elif type(_id) == str:
                 docs['docs'].append({'id': _id})
+                
         path = f'{self.name}/_bulk_get'
         resp = self.server.session.post(path=path, data=docs)
         if resp.code == 200:
-            print('bulk')
+            ret = resp.json
+            if type(ret) is dict:
+                return ret.get('results', list())
+            else:
+                return list()
+        elif resp.code == 400:
+            raise DatabaseError(messeage='The request provided invalid JSON data or invalid query parameter')
+        else:
+            raise DatabaseError(resp.code)
+    
+    def bulk_update(self, docs_list):
+        if type(docs_list) is not list:
+            raise ValueError(f'args List expected not {type(docs_list)}')
+        
+        for doc in docs_list:
+            if '_id' not in doc:
+                raise ValueError('Missing id in doc')
+        
+        docs = {'docs': docs_list}
+        path = f'{self.name}/_bulk_docs'
+        resp = self.server.session.post(path=path, data=docs)
+        if resp.code == 201:
             return resp.json
+        elif resp.code == 400:
+            raise DatabaseError(messeage='The request provided invalid JSON data')
+        else:
+            raise DatabaseError(resp.code)
+        
 
     # def purge(self, docinfo):
     #     resp = self.server.session.post(path=f'{self.name}/_purge')
@@ -209,10 +247,12 @@ class Database:
 
     def __contains__(self, item):
         resp = self.server.session.head(path=f'{self.name}/{item}')
-        if resp.code == 200:
+        if resp.code in (200, 304):
             return True
-        else:
+        elif resp.code == 404:
             return False
+        else:
+            raise DatabaseError(resp.code)
 
     def __iter__(self):
         doc = self.all_docs()
@@ -240,14 +280,31 @@ class Database:
 
 
 class DatabaseError(Exception):
-    def __init__(self, status, code=0):
-        msg = {
+    _codes = {
             400: 'Invalid database name',
-            401: 'CouchDB Server Administrator privileges required',
-            412: 'Database already exists'
+            401: 'Read/Write privileges required',
+            404: 'Requested database not found',
+            409: 'A Conflicting Document with same ID already exists',
+            412: 'Database already exists',
+            415: 'Bad Content-Type value',
+            417: 'Expectation Failed – Occurs when at least one document was rejected by a validation function',
+            500: 'Query execution error'
                }
-        self.message = msg.get(status, f'Unknow Error: {status}')
+    
+    def __init__(self, code=0, messeage=f'Unknow Error'):
+        self.message = self._codes.get(code, messeage)   
 
 
 class DocumentError(Exception):
-    pass
+    _codes = {
+            400: 'Invalid database name',
+            401: 'Read/Write privileges required',
+            404: 'Specified database or document ID doesn’t exists',
+            409: 'A Conflicting Document with same ID already exists',
+            412: 'Database already exists',
+            415: 'Bad Content-Type value',
+            500: 'Query execution error'
+               }
+    
+    def __init__(self, code=0, messeage=f'Unknow Error'):
+        self.message = self._codes.get(code, messeage)

@@ -14,7 +14,7 @@ class MetaDocument(type):
         return result
 
 
-class Document(metaclass=MetaDocument):
+class Document: #(metaclass=MetaDocument):
     _id = None
     _rev = None
     _doc = dict()
