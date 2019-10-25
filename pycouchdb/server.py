@@ -105,14 +105,18 @@ class Session:
        
 
 class Server:
-    """Main class to connect to Database"""
-    
-    def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
-        """Class to create connection to db
-        Kwargs:
+    """Main class to connect to Database
+        
+        Args:
             url (str): url to database server
             port (int): port number for server connection defautl 5984
-        """
+            user (str): user name 
+            password (str): password
+            ssl (bool): use https 
+    """
+    
+    def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
+        
         self.session = Session(url=url, port=port, ssl=ssl, user=user, password=password)
         self._version = None
         self._uuid = None
@@ -143,6 +147,8 @@ class Server:
         return resp.json
 
     def all_dbs(self):
+        """Returns a list of all the databases in the CouchDB instance.
+        """
         resp = self.session.get(path='_all_dbs')
         return resp.json
 
@@ -150,13 +156,22 @@ class Server:
         """
         Returns information of a list of the specified databases in the CouchDB instance
         
-        :param keys:
-        :returns: list
+        Args:
+            keys (list): Array of database names to be requested
+        
+        Returns: 
+            list: list of datebase info
+        
+        Raises:
+            ServerError
         """
         _keys = list()
         _keys.extend(keys)
         resp = self.session.post(path='_dbs_info', data={'keys': _keys})
-        return resp.json
+        if resp.code == 200:
+            return resp.json
+        else:
+            raise ServerError(resp.code)
 
     def cluster_setup(self):
         pass
@@ -174,10 +189,25 @@ class Server:
         raise NotImplementedError
 
     def membership(self):
+        """Displays the nodes that are part of the cluster as cluster_nodes.
+        The field all_nodes displays all nodes this node knows about,
+        including the ones that are part of the cluster.
+        
+        Returns:
+            dict:
+        """
         resp = self.session.get(path='_membership')
         return resp.json
 
     def db(self, name):
+        """Return interface to database
+        
+        Args:
+            name (str): Database name
+        
+        Returns:
+            pychouch.db.Database: 
+        """
         resp = self.session.head(path=name)
         if resp.code == 200:
             return Database(name, self)
@@ -197,7 +227,7 @@ class Server:
             name (str):  The name of new Db.
         
         Returns:
-            dict.  dict with {'ok': True}
+            dict:  status
         
         Raises:
             ServerError
@@ -211,6 +241,17 @@ class Server:
             raise ServerError(resp.code)
 
     def delete(self, db_name):
+        """Deletes the specified database, and all the documents and attachments contained within it.
+        
+        Args:
+            db_name (str): Database name
+        
+        Returns:
+            dict:  status
+        
+        Raises:
+            ServerError
+        """
         resp = self.session.delete(path=db_name)
         if resp.code in (200, 202):
             return resp.json

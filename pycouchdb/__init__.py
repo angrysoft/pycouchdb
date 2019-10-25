@@ -15,5 +15,5 @@
 __all__ = ['Server', 'Database', 'Document']
 
 from .server import Server
-from .db import Database, DatabaseError
+from .db import Database
 from .doc import Document

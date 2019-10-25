@@ -30,28 +30,30 @@ class Query:
         self._fileds = []
         self._sort = []
 
-
+# TODO Attchement
 class Database:
-    """
-    Class for db operations
     
-    :param name: Database name
-    :param server: Instance of pycouchdb.server.Server
-    :type server: :class:`pycouchdb.server.Server` class.
-    """
-    # TODO Attachments
     def __init__(self, name, server):
+        """Class for db operations
+        
+        Args:
+            name (str): Database name
+            server (Server): Instance of pycouchdb.server.Server
+        """
         self.server = server
         self.name = name
 
     def doc_info(self, docid) -> dict:
-        """
-            doc_info - Minimal amount of information about the specified document.
+        """Minimal amount of information about the specified document.
+           
+            Args: 
+                docid (str): Document ID.
+                
+            Returns:
+                dict: Dictionary with keys rev - revision, size - size of document , date
             
-            :param docid: Document ID.
-            :type docid: str
-            :returns: dict -- Dictionary with keys rev - revision, size - size of document , date
-            :raises: DatabaseError
+            Raises:
+                DatabaseError
         """
         resp = self.server.session.head(path=f'{self.name}/{docid}')
         if resp.code in (200, 304):
@@ -65,11 +67,16 @@ class Database:
         """
             Get docmument by id
             
-            :param docid: Document ID
-            :param attachments: Includes attachments bodies in response.Default is false
-            :param att_encoding_info: type bool: Includes encoding
-            :returns: Document
-            :raises: DatabaseError
+            Args:
+                docid (str): Document ID
+                attachments (bool): Includes attachments bodies in response.Default is false
+                att_encoding_info (bool): Includes encoding
+            
+            Returns: 
+                Document
+            
+            Raises:
+                DatabaseError
         """    
             # 
             #     information in attachment stubs if the particular attachment is compressed.Default is false.
@@ -114,12 +121,15 @@ class Database:
         """
             Creates a new document in database
             
-            :param doc: Document ID.
-            :type doc: dict or :class:`pycouch.doc.Document` 
-            :param batch: Stores document in batch mode
-            :type batch: bool 
-            :returns: tuple -- document id, revision.
-            :raises: DatabaseError
+            Args:
+                doc (dict): Document ID. 
+                batch (bool): Stores document in batch mode
+             
+            Returns:
+                tuple: document id, revision
+            
+            Raises:
+                DatabaseError
             
             You can write documents to the database at a higher rate by using the 
             batch option. This collects document writes together in memory
@@ -162,8 +172,15 @@ class Database:
     def delete(self, docid):
         """Marks the specified document as deleted
         
-        :param docid: Document ID
-        :return: document id rev or rasie DatabaseError"""
+        Args:
+            docid (str): Document ID
+        
+        Return:
+            tuple: document id rev
+        
+        Raises:
+            DatabaseError
+        """
         info = self.doc_info(docid)
         resp = self.server.session.delete(path=f'{self.name}/{docid}', query={'rev': info.get('rev')})
         if resp.code in (200, 202):
