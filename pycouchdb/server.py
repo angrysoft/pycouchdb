@@ -105,7 +105,14 @@ class Session:
        
 
 class Server:
+    """Main class to connect to Database"""
+    
     def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
+        """Class to create connection to db
+        Kwargs:
+            url (str): url to database server
+            port (int): port number for server connection defautl 5984
+        """
         self.session = Session(url=url, port=port, ssl=ssl, user=user, password=password)
         self._version = None
         self._uuid = None
@@ -142,8 +149,9 @@ class Server:
     def dbs_info(self, *keys) -> list:
         """
         Returns information of a list of the specified databases in the CouchDB instance
-        :param keys
-        :return list
+        
+        :param keys:
+        :returns: list
         """
         _keys = list()
         _keys.extend(keys)
@@ -177,6 +185,24 @@ class Server:
             raise ServerError(resp.code)
 
     def create(self, name):
+        """
+        Creates a new database. 
+        The database name {db} must be composed by following next rules:
+        Name must begin with a lowercase letter (a-z)
+        Lowercase characters (a-z)
+        Digits (0-9)
+        Any of the characters _, $, (, ), +, -, and /.
+        
+        Args:
+            name (str):  The name of new Db.
+        
+        Returns:
+            dict.  dict with {'ok': True}
+        
+        Raises:
+            ServerError
+            
+        """
         # TODO : name check
         resp = self.session.put(path=name)
         if resp.code in (201, 202):

@@ -32,12 +32,27 @@ class Query:
 
 
 class Database:
+    """
+    Class for db operations
+    
+    :param name: Database name
+    :param server: Instance of pycouchdb.server.Server
+    :type server: :class:`pycouchdb.server.Server` class.
+    """
     # TODO Attachments
     def __init__(self, name, server):
         self.server = server
         self.name = name
 
-    def doc_info(self, docid):
+    def doc_info(self, docid) -> dict:
+        """
+            doc_info - Minimal amount of information about the specified document.
+            
+            :param docid: Document ID.
+            :type docid: str
+            :returns: dict -- Dictionary with keys rev - revision, size - size of document , date
+            :raises: DatabaseError
+        """
         resp = self.server.session.head(path=f'{self.name}/{docid}')
         if resp.code in (200, 304):
             return {'rev': resp.headers.get('ETag', '').strip('"'),
@@ -46,24 +61,33 @@ class Database:
         else:
             raise DatabaseError(resp.code)
 
-    def get(self, _id, attchments=False, att_encoding_info=False):
+    def get(self, docid, attchments=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False):
+        """
+            Get docmument by id
+            
+            :param docid: Document ID
+            :param attachments: Includes attachments bodies in response.Default is false
+            :param att_encoding_info: type bool: Includes encoding
+            :returns: Document
+            :raises: DatabaseError
+        """    
+            # 
+            #     information in attachment stubs if the particular attachment is compressed.Default is false.
+            # atts_since(array) – Includes attachments only since specified revisions.Doesn’t includes attachments
+            #     for specified revisions.Optional
+            # conflicts(boolean) – Includes information about conflicts in document.Default is false
+            # deleted_conflicts(boolean) – Includes information about deleted conflicted revisions.Default is false
+            # latest(boolean) – Forces retrieving latest “leaf” revision, no matter what rev was requested.Default is false
+            # local_seq(boolean) – Includes last update sequence for the document.Default is false
+            # meta(boolean) – Acts same as specifying all conflicts,
+            #     deleted_conflicts and revs_info query parameters.Default is false
+            # open_revs(array) – Retrieves documents of specified leaf revisions.Additionally,
+            #     it accepts value as all to return all leaf revisions.Optional
+            # rev(string) – Retrieves document of specified revision.Optional
+            # revs(boolean) – Includes list of all known document revisions.Default is false
+            # revs_info(boolean) – Includes detailed information for all known document revisions.Default is false
+        
         # TODO query options
-        # attachments(boolean) – Includes attachments bodies in response.Default is false
-        # att_encoding_info(boolean) – Includes encoding
-        # information in attachment stubs if the particular attachment is compressed.Default is false.
-        # atts_since(array) – Includes attachments only since specified revisions.Doesn’t includes attachments
-        # for specified revisions.Optional
-        # conflicts(boolean) – Includes information about conflicts in document.Default is false
-        # deleted_conflicts(boolean) – Includes information about deleted conflicted revisions.Default is false
-        # latest(boolean) – Forces retrieving latest “leaf” revision, no matter what rev was requested.Default is false
-        # local_seq(boolean) – Includes last update sequence for the document.Default is false
-        # meta(boolean) – Acts same as specifying all conflicts,
-        #   deleted_conflicts and revs_info query parameters.Default is false
-        # open_revs(array) – Retrieves documents of specified leaf revisions.Additionally,
-        #   it accepts value as all to return all leaf revisions.Optional
-        # rev(string) – Retrieves document of specified revision.Optional
-        # revs(boolean) – Includes list of all known document revisions.Default is false
-        # revs_info(boolean) – Includes detailed information for all known document revisions.Default is false
         
         _query = {}
         
@@ -76,7 +100,7 @@ class Database:
             _query['att_encoding_info'] = 'true'
         
         
-        resp = self.server.session.get(f'{self.name}/{_id}', query=_query)
+        resp = self.server.session.get(f'{self.name}/{docid}', query=_query)
         if resp.code in (200, 304):
             return resp.json
         elif resp.code == 400:
@@ -87,6 +111,24 @@ class Database:
             raise DatabaseError(resp.code)
 
     def add(self, doc, batch=False):
+        """
+            Creates a new document in database
+            
+            :param doc: Document ID.
+            :type doc: dict or :class:`pycouch.doc.Document` 
+            :param batch: Stores document in batch mode
+            :type batch: bool 
+            :returns: tuple -- document id, revision.
+            :raises: DatabaseError
+            
+            You can write documents to the database at a higher rate by using the 
+            batch option. This collects document writes together in memory
+            (on a per-user basis) before they are committed to disk.
+            This increases the risk of the documents not being stored in 
+            the event of a failure, since the documents are not written 
+            to disk immediately.
+        """
+        
         if '_id' in doc:
             if type(doc['_id']) is not str:
                 doc['_id'] = str(doc['_id'])
@@ -118,6 +160,10 @@ class Database:
             raise DatabaseError(resp.code)
 
     def delete(self, docid):
+        """Marks the specified document as deleted
+        
+        :param docid: Document ID
+        :return: document id rev or rasie DatabaseError"""
         info = self.doc_info(docid)
         resp = self.server.session.delete(path=f'{self.name}/{docid}', query={'rev': info.get('rev')})
         if resp.code in (200, 202):
