@@ -270,6 +270,7 @@ class Database:
         resp = self.server.session.post(path=path, data=docs)
         if resp.code == 200:
             ret = resp.json
+            _dosc_list = list()
             if type(ret) is dict:
                 return ret.get('results', list())
             else:

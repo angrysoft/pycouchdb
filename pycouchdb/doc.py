@@ -46,3 +46,9 @@ class Document: #(metaclass=MetaDocument):
 
     def __setitem__(self, key, value):
             self._doc[key] = value
+
+class DocumentError(Exception):
+    _codes = {}
+    
+    def __init__(self, code=0, messeage=f'Unknow Error'):
+        self.message = self._codes.get(code, messeage)   

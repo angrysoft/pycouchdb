@@ -99,15 +99,18 @@ class PyCouchdbTestBulk(unittest.TestCase):
     
     def test_b_bulk_get(self):
          print('\nBulk get docs')
-         print(self.db.bulk_get([str(x) for x in range(0,10)]))
+         print(self.db.bulk_get([str(x) for x in range(0,11)]))
     
     def test_c_bule_update(self):
         print('\nBulk update docs')
         docs = self.db.bulk_get([str(x) for x in range(0,10)])
+        docs_to_update = list()
         for i, x in enumerate(docs):
-            print(i,x)
+            doc = x['docs'][0].get('ok', {})
+            doc['n'] = i
+            docs_to_update.append(doc)
             
-        # print(self.db.bulk_update(docs))
+        print(self.db.bulk_update(docs_to_update))
         
     def test_d_bulk_del(self):
         pass
