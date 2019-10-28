@@ -19,5 +19,5 @@ setup(
         'build_sphinx': {
             'project': ('setup.py', name),
             'version': ('setup.py', version),
-            'source_dir': ('setup.py', 'docs/source')}}
+            'source_dir': ('setup.py', 'docs')}}
 )
