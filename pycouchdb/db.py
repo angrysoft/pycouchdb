@@ -157,7 +157,7 @@ class Database:
         _doc = self.get(docid)
         _doc.update(doc)
         resp = self.server.session.put(path=f'{self.name}/{docid}', data=_doc, query={'rev': _doc.get('_rev')})
-        if resp.code in (200, 202):
+        if resp.code in (201, 202):
             ret = resp.json
             return ret.get('id'), ret.get('rev')
         elif resp.code == 400:
