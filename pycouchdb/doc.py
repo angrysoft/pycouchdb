@@ -9,7 +9,7 @@ class MetaDocument(type):
 
         for obj_name in attrs:
             obj = getattr(result, obj_name)
-            if not obj_name.startswith('_') and type(obj) is not 'function':
+            if not obj_name.startswith('_') and type(obj) != 'function':
                 result.doc[obj_name] = obj
         return result
 
