@@ -1,0 +1,2 @@
+if no document return empty list not raise exception
+

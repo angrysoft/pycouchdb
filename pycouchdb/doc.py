@@ -13,6 +13,8 @@ class MetaDocument(type):
                 result.doc[obj_name] = obj
         return result
 
+class DocumdntList:
+    pass
 
 class Document: #(metaclass=MetaDocument):
     _id = None
