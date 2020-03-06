@@ -52,8 +52,6 @@ class Response:
 # TODO auth , connectionpool ?
 class Session:
     def __init__(self, url, port, ssl=None, timeout=5, user=None, password=None):
-        if user and password:
-            pass
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
         self.url = f'{url}:{port}'
         self.port = port
@@ -112,7 +110,15 @@ class Server:
             port (int): port number for server connection defautl 5984
             user (str): user name 
             password (str): password
-            ssl (bool): use https 
+            ssl (bool): use https
+        
+        Examples:
+        >>> srv = Server()
+        >>> srv.create('userdb')
+        >>> users = srv.db('userdb')
+        >>> usr = {'name': 'john', 'lastname':'doe'}
+        >>> users.add(usr)
+        >>> srv.delete('usersdb')
     """
     
     def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
@@ -206,7 +212,7 @@ class Server:
             name (str): Database name
         
         Returns:
-            pychouch.db.Database: 
+            class: instance of pychouch.db.Database: 
         """
         resp = self.session.head(path=name)
         if resp.code == 200:
