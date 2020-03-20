@@ -13,7 +13,7 @@ class MetaDocument(type):
                 result.doc[obj_name] = obj
         return result
 
-class DocumdntList:
+class DocumentList:
     pass
 
 class Document: #(metaclass=MetaDocument):
@@ -21,7 +21,7 @@ class Document: #(metaclass=MetaDocument):
     _rev = None
     _doc = dict()
 
-    def __init__(self, **kwargs):
+    def __init__(self, dbobj, **kwargs):
         self.update(kwargs)
 
     @classmethod

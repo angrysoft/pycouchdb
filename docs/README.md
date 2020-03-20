@@ -1,35 +1,35 @@
 Welcome to PyCouchDB's documentation!
-#####################################
+=====================================
 
 
 Indices and tables
-##################
+==================
 
-# Index
+* Index
 
-# Module Index
+* Module Index
 
-# Search Page
+* Search Page
 
 
 PyCouchDB server
-################
+================
 
 class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, password=None, ssl=None)
 
    Main class to connect to Database
 
    Parameters:
-      # ##url## (#str#) -- url to database server
+      * **url** (*str*) -- url to database server
 
-      # ##port## (#int#) -- port number for server connection defautl
+      * **port** (*int*) -- port number for server connection defautl
         5984
 
-      # ##user## (#str#) -- user name
+      * **user** (*str*) -- user name
 
-      # ##password## (#str#) -- password
+      * **password** (*str*) -- password
 
-      # ##ssl## (#bool#) -- use https
+      * **ssl** (*bool*) -- use https
 
    all_dbs()
 
@@ -43,7 +43,7 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
       characters _, $, (, ), +, -, and /.
 
       Parameters:
-         ##name## (#str#) -- The name of new Db.
+         **name** (*str*) -- The name of new Db.
 
       Returns:
          status
@@ -52,26 +52,26 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
          dict
 
       Raises:
-         ##ServerError## --
+         **ServerError** --
 
    db(name)
 
       Return interface to database
 
       Parameters:
-         ##name## (#str#) -- Database name
+         **name** (*str*) -- Database name
 
       Returns:
       Return type:
          pychouch.db.Database
 
-   dbs_info(#keys) -> list
+   dbs_info(*keys) -> list
 
       Returns information of a list of the specified databases in the
       CouchDB instance
 
       Parameters:
-         ##keys## (#list#) -- Array of database names to be requested
+         **keys** (*list*) -- Array of database names to be requested
 
       Returns:
          list of datebase info
@@ -80,7 +80,7 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
          list
 
       Raises:
-         ##ServerError## --
+         **ServerError** --
 
    delete(db_name)
 
@@ -88,7 +88,7 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
       attachments contained within it.
 
       Parameters:
-         ##db_name## (#str#) -- Database name
+         **db_name** (*str*) -- Database name
 
       Returns:
          status
@@ -97,7 +97,7 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
          dict
 
       Raises:
-         ##ServerError## --
+         **ServerError** --
 
    membership()
 
@@ -111,7 +111,7 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
 
 
 PyCouchDB db
-############
+************
 
 class pycouchdb.db.Database(name, server)
 
@@ -120,9 +120,9 @@ class pycouchdb.db.Database(name, server)
       Creates a new document in database
 
       Parameters:
-         # ##doc## (#dict#) -- Document ID.
+         * **doc** (*dict*) -- Document ID.
 
-         # ##batch## (#bool#) -- Stores document in batch mode
+         * **batch** (*bool*) -- Stores document in batch mode
 
       Returns:
          document id, revision
@@ -131,7 +131,7 @@ class pycouchdb.db.Database(name, server)
          tuple
 
       Raises:
-         ##DatabaseError## --
+         **DatabaseError** --
 
       You can write documents to the database at a higher rate by
       using the batch option. This collects document writes together
@@ -145,7 +145,7 @@ class pycouchdb.db.Database(name, server)
       Marks the specified document as deleted
 
       Parameters:
-         ##docid## (#str#) -- Document ID
+         **docid** (*str*) -- Document ID
 
       Returns:
          document id rev
@@ -154,14 +154,14 @@ class pycouchdb.db.Database(name, server)
          tuple
 
       Raises:
-         ##DatabaseError## --
+         **DatabaseError** --
 
    doc_info(docid) -> dict
 
       Minimal amount of information about the specified document.
 
       Parameters:
-         ##docid## (#str#) -- Document ID.
+         **docid** (*str*) -- Document ID.
 
       Returns:
          Dictionary with keys rev - revision, size - size of document
@@ -171,28 +171,28 @@ class pycouchdb.db.Database(name, server)
          dict
 
       Raises:
-         ##DatabaseError## --
+         **DatabaseError** --
 
    get(docid, attchments=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False)
 
       Get docmument by id
 
       Parameters:
-         # ##docid## (#str#) -- Document ID
+         * **docid** (*str*) -- Document ID
 
-         # ##attachments## (#bool#) -- Includes attachments bodies in
+         * **attachments** (*bool*) -- Includes attachments bodies in
            response.Default is false
 
-         # ##att_encoding_info## (#bool#) -- Includes encoding
+         * **att_encoding_info** (*bool*) -- Includes encoding
 
       Returns:
          Document
 
       Raises:
-         ##DatabaseError## --
+         **DatabaseError** --
 
 
 PyCouchDB document
-##################
+******************
 
-class pycouchdb.doc.Document(##kwargs)
+class pycouchdb.doc.Document(**kwargs)

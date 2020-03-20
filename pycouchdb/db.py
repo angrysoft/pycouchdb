@@ -113,7 +113,8 @@ class Database:
         elif resp.code == 400:
             raise DatabaseError(messeage='The format of the request or revision was invalid')
         elif resp.code == 404:
-            raise DatabaseError('Specified database or document ID doesn’t exists')
+            # raise DatabaseError('Specified database or document ID doesn’t exists')
+            return {}
         else:
             raise DatabaseError(resp.code)
 
