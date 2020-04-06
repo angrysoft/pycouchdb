@@ -1,9 +1,9 @@
 Welcome to PyCouchDB's documentation!
-=====================================
+*************************************
 
 
 Indices and tables
-==================
+******************
 
 * Index
 
@@ -13,7 +13,7 @@ Indices and tables
 
 
 PyCouchDB server
-================
+****************
 
 class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, password=None, ssl=None)
 
@@ -30,6 +30,10 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
       * **password** (*str*) -- password
 
       * **ssl** (*bool*) -- use https
+
+   Examples: >>> srv = Server() >>> srv.create('userdb') >>> users =
+   srv.db('userdb') >>> usr = {'name': 'john', 'lastname':'doe'} >>>
+   users.add(usr) >>> srv.delete('usersdb')
 
    all_dbs()
 
@@ -62,8 +66,10 @@ class pycouchdb.server.Server(url='http://localhost', port=5984, user=None, pass
          **name** (*str*) -- Database name
 
       Returns:
+         instance of pychouch.db.Database:
+
       Return type:
-         pychouch.db.Database
+         class
 
    dbs_info(*keys) -> list
 
@@ -195,4 +201,4 @@ class pycouchdb.db.Database(name, server)
 PyCouchDB document
 ******************
 
-class pycouchdb.doc.Document(**kwargs)
+class pycouchdb.doc.Document(dbobj, **kwargs)
