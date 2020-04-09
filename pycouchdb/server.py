@@ -104,25 +104,25 @@ class Session:
 
 class Server:
     """Main class to connect to Database
-        
+    
+    Example:
+        srv = Server()
+        srv.create('userdb')
+        users = srv.db('userdb')
+        usr = {'name': 'john', 'lastname':'doe'}
+        users.add(usr)
+        srv.delete('usersdb')
+    """
+    
+    def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
+        """Server constructor
         Args:
             url (str): url to database server
             port (int): port number for server connection defautl 5984
             user (str): user name 
             password (str): password
             ssl (bool): use https
-        
-        Examples:
-        >>> srv = Server()
-        >>> srv.create('userdb')
-        >>> users = srv.db('userdb')
-        >>> usr = {'name': 'john', 'lastname':'doe'}
-        >>> users.add(usr)
-        >>> srv.delete('usersdb')
-    """
-    
-    def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
-        
+        """
         self.session = Session(url=url, port=port, ssl=ssl, user=user, password=password)
         self._version = None
         self._uuid = None

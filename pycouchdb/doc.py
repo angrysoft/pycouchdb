@@ -1,27 +1,14 @@
 import json
 
-
-class MetaDocument(type):
-
-    def __new__(mcs, name, bases, attrs):
-        result = type.__new__(mcs, name, bases, attrs)
-        result.doc = dict()
-
-        for obj_name in attrs:
-            obj = getattr(result, obj_name)
-            if not obj_name.startswith('_') and type(obj) != 'function':
-                result.doc[obj_name] = obj
-        return result
-
 class DocumentList:
     pass
 
 class Document: #(metaclass=MetaDocument):
-    _id = None
-    _rev = None
-    _doc = dict()
 
-    def __init__(self, dbobj, **kwargs):
+    def __init__(self, dbobj=None, **kwargs):
+        self._id = None
+        self._rev = None
+        self._doc = dict()
         self.update(kwargs)
 
     @classmethod
