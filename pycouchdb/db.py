@@ -205,6 +205,15 @@ class Database:
         else:
             resp = self.server.session.get(path)
         return resp.json
+    
+    def get_all_docs(self):
+        doc = self.all_docs()
+        rows = doc.get('rows')
+        i = 0
+        while i <= (len(rows)-1):
+            doc = rows[i]
+            i += 1
+            yield Document.from_dict(self.get(doc['id']), self)
 
     def find(self, selector={}, fields=[], sort=[], limit=25, skip=0, execution_status=False):
         query = {

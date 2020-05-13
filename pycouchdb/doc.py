@@ -4,23 +4,47 @@ class DocumentList:
     pass
 
 class Document: #(metaclass=MetaDocument):
+    
+    
+    
+    @classmethod
+    def from_dict(cls, data, db=None):
+        obj = cls.__new__(cls)
+        instance = cls(db)
+        instance.update(data)
+        return instance
 
-    def __init__(self, dbobj=None, **kwargs):
-        self._id = None
-        self._rev = None
+    def __init__(self, db=None, **kwargs):
         self._doc = dict()
-        self.update(kwargs)
+        if kwargs:
+            self.update(kwargs)
+        self._db = db
+        # if isinstance(db, Database):
+        #     self._db = db
+    
+    @property
+    def id(self):
+        return self._doc.get('_id')
+    
+    @id.setter
+    def id(self, value):
+        self._doc['_id'] = value
+        
+    @property
+    def rev(self):
+        return self._doc('_rev')
+    
+    @rev.setter
+    def rev(self, value):
+        self._doc['_rev'] = value
+    
+    def __str__(self):
+        return str(self._doc)
 
-    @classmethod
-    def __str__(cls):
-        return str(cls._doc)
-
-    @classmethod
-    def update(cls, _doc):
+    def update(self, _doc):
         if type(_doc) is not dict:
             raise ValueError('_doc should by a dict')
-        for key in _doc:
-            cls._doc[key] = _doc[key]
+        self._doc.update(_doc)
 
     @property
     def json(self):
@@ -34,7 +58,7 @@ class Document: #(metaclass=MetaDocument):
         return getattr(self, key)
 
     def __setitem__(self, key, value):
-            self._doc[key] = value
+        self._doc[key] = value
 
 class DocumentError(Exception):
     _codes = {}
