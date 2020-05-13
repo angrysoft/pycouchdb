@@ -329,7 +329,7 @@ class Database:
         if self.i <= (len(self.rows)-1):
             doc = self.rows[self.i]
             self.i += 1
-            return self[doc['id']]
+            return doc['id']
         else:
             raise StopIteration
 
