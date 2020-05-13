@@ -53,7 +53,7 @@ class Document: #(metaclass=MetaDocument):
         self.update(json.loads(value))
         
     def get_dict(self):
-        return self._dict.copy()
+        return self._doc.copy()
 
     def __getitem__(self, key):
         return getattr(self, key)
