@@ -5,8 +5,6 @@ class DocumentList:
 
 class Document: #(metaclass=MetaDocument):
     
-    
-    
     @classmethod
     def from_dict(cls, data, db=None):
         obj = cls.__new__(cls)
@@ -53,6 +51,9 @@ class Document: #(metaclass=MetaDocument):
     @json.setter
     def json(self, value):
         self.update(json.loads(value))
+        
+    def get_dict(self):
+        return self._dict.copy()
 
     def __getitem__(self, key):
         return getattr(self, key)
