@@ -54,9 +54,12 @@ class Document: #(metaclass=MetaDocument):
         
     def get_dict(self):
         return self._doc.copy()
+    
+    def get(self, key, default=None):
+        return self._doc.get(key, default)
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        return self._doc[key]
 
     def __setitem__(self, key, value):
         self._doc[key] = value
