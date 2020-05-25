@@ -43,6 +43,12 @@ class Document: #(metaclass=MetaDocument):
         if type(_doc) is not dict:
             raise ValueError('_doc should by a dict')
         self._doc.update(_doc)
+    
+    def pop(self, key, default=None):
+        return self._doc.pop(key, default)
+    
+    def popitem(self):
+        return self._doc.popitem()
 
     @property
     def json(self):
