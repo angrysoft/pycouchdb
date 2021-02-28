@@ -1,7 +1,8 @@
 from setuptools import setup
+from .pycouchdb import __version__
 
 name = 'pycouchdb'
-version = '0.2'
+version:str = __version__
 
 setup(
     name=name,

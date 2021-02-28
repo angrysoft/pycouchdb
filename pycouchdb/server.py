@@ -12,95 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from urllib.parse import quote
-from urllib.request import urlopen, Request
-import urllib.error
-from base64 import b64encode
-import json
+from typing import Dict
+from pycouchdb.connections.urllibcon import UrllibConn
 from .db import Database
-from threading import RLock
-
-
-class Response:
-    def __init__(self, resp):
-        self.resp = resp
-        self._headers = {}
-        if resp.readable:
-            self.body = resp.read()
-            self._headers = resp.headers
-
-    @property
-    def code(self):
-        return self.resp.code
-
-    @property
-    def status(self):
-        return self.resp.status
-
-    @property
-    def json(self):
-        try:
-            return json.loads(self.body)
-        except json.JSONDecodeError:
-            raise ServerError(self.body)
-
-    @property
-    def headers(self):
-        return self.resp.headers
-
-
-# TODO auth , connectionpool ?
-class Session:
-    def __init__(self, url, port, ssl=None, timeout=5, user=None, password=None):
-        self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-        self.url = f'{url}:{port}'
-        self.port = port
-        self.timeout = timeout
-        self.lock = RLock()
-        self.ssl = ssl
-        self.user = user
-        self.password = password
-        # self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
-        #                          errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
-        #                          errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
-    
-        if self.user and self.password:
-            self.headers['Authorization'] = f"Basic {b64encode(f'{self.user}:{self.password}'.encode('utf-8')).decode('ascii')}"
-        
-    def get(self, path='', query={}):
-        return self.request(method='GET', path=path, query=query)
-
-    def post(self, path='', data=None, headers={}, query={}):
-        return self.request(path, method='POST', data=data, headers=headers, query=query)
-
-    def put(self, path='', data=None, headers={}, query={}):
-        return self.request(path, method='PUT', data=data, headers=headers, query=query)
-
-    def delete(self, path, query={}):
-        return self.request(path, method='DELETE', query=query)
-
-    def head(self, path, query={}):
-        return self.request(path, method='HEAD', query=query)
-
-    def request(self, path, method='GET', data=None, headers={}, query={}):
-        headers.update(self.headers)
-        _query = '&'.join([f'{q}={query[q]}' for q in query])
-        if data is not None and type(data) is not str:
-            try:
-                data = json.dumps(data)
-            except json.JSONDecodeError:
-                raise ServerError(f'params parsing error {data}')
-            data = data.encode('utf8')
-        if query:
-            _query = f'?{_query}'
-            
-        req = Request(url=f'{self.url}/{quote(path)}{_query}', method=method, data=data, headers=headers)
-        with self.lock:    
-            try:
-                return Response(urlopen(req))
-            except urllib.error.HTTPError as err:
-                return Response(err)
-       
+from re import search
+     
 
 class Server:
     """Main class to connect to Database
@@ -114,27 +30,27 @@ class Server:
         srv.delete('usersdb')
     """
     
-    def __init__(self, url='http://localhost', port=5984, user=None, password=None, ssl=None):
+    def __init__(self, url:str='http://localhost', port:int=5984, user:str="", password:str="", ssl:bool=False):
         """Server constructor
         Args:
             url (str): url to database server
-            port (int): port number for server connection defautl 5984
+            port (int): port number for server connection default 5984
             user (str): user name 
             password (str): password
             ssl (bool): use https
         """
-        self.session = Session(url=url, port=port, ssl=ssl, user=user, password=password)
-        self._version = None
-        self._uuid = None
-        self._vendor = None
+        self.conn = UrllibConn(url=url, port=port, user=user, password=password)
+        self._version:str = ""
+        self._uuid:str = ""
+        self._vendor:str = ""
         self._get_server_info()
 
     @property
-    def version(self):
+    def version(self) -> str:
         return self._version
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         return self._uuid
 
     @property
@@ -142,23 +58,23 @@ class Server:
         return self._vendor
 
     def _get_server_info(self):
-        resp = self.session.get()
-        ret = resp.json
-        self._version = ret.get('version')
-        self._uuid = ret.get('uuid')
-        self._vendor = ret.get('vendor')
+        resp = self.conn.get()
+        ret = resp.get_data()
+        self._version = ret.get('version', '')
+        self._uuid = ret.get('uuid', '')
+        self._vendor = ret.get('vendor', '')
 
     def active_tasks(self):
-        resp = self.session.get(path='_active_tasks')
-        return resp.json
+        resp = self.conn.get(path='_active_tasks')
+        return resp.get_data()
 
     def all_dbs(self):
         """Returns a list of all the databases in the CouchDB instance.
         """
-        resp = self.session.get(path='_all_dbs')
-        return resp.json
+        resp = self.conn.get(path='_all_dbs')
+        return resp.get_data()
 
-    def dbs_info(self, *keys) -> list:
+    def dbs_info(self, *keys:str) -> List[Any]:
         """
         Returns information of a list of the specified databases in the CouchDB instance
         
@@ -173,11 +89,11 @@ class Server:
         """
         _keys = list()
         _keys.extend(keys)
-        resp = self.session.post(path='_dbs_info', data={'keys': _keys})
-        if resp.code == 200:
-            return resp.json
+        resp = self.conn.post(path='_dbs_info', data={'keys': _keys})
+        if resp.status == 200:
+            return resp.get_data()
         else:
-            raise ServerError(resp.code)
+            raise ServerError(resp.status)
 
     def cluster_setup(self):
         pass
@@ -202,10 +118,14 @@ class Server:
         Returns:
             dict:
         """
-        resp = self.session.get(path='_membership')
-        return resp.json
-
-    def db(self, name):
+        resp = self.conn.get(path='_membership')
+        return resp.get_data()
+    
+    def db(self,name:str):
+        Warning("Deprecated use get_db")
+        return self.get_db(name)
+    
+    def get_db(self, name:str):
         """Return interface to database
         
         Args:
@@ -214,13 +134,13 @@ class Server:
         Returns:
             class: instance of pychouch.db.Database: 
         """
-        resp = self.session.head(path=name)
-        if resp.code == 200:
+        
+        if (resp := self.conn.head(path=name)).status == 200:
             return Database(name, self)
         else:
-            raise ServerError(resp.code)
+            raise ServerError(resp.status)
 
-    def create(self, name):
+    def create(self, name:str):
         """
         Creates a new database. 
         The database name {db} must be composed by following next rules:
@@ -239,14 +159,16 @@ class Server:
             ServerError
             
         """
-        # TODO : name check
-        resp = self.session.put(path=name)
-        if resp.code in (201, 202):
-            return resp.json
+        name = name.lower()
+        if not search('^[a-z][a-z0-9_$()+/-]*$', name):
+            raise ValueError("Incorrect char in name")
+        
+        if (resp := self.conn.put(path=name)).status in (201, 202):
+            return resp.get_data()
         else:
-            raise ServerError(resp.code)
+            raise ServerError(resp.status)
 
-    def delete(self, db_name):
+    def delete(self, db_name:str):
         """Deletes the specified database, and all the documents and attachments contained within it.
         
         Args:
@@ -258,21 +180,20 @@ class Server:
         Raises:
             ServerError
         """
-        resp = self.session.delete(path=db_name)
-        if resp.code in (200, 202):
-            return resp.json
+        
+        if (resp := self.conn.delete(path=db_name)).status in (200, 202):
+            return resp.get_data()
         else:
-            raise ServerError(resp.code)
+            raise ServerError(resp.status)
         
     def __iter__(self):
         return iter(self.all_dbs())
 
-    def __getitem__(self, item):
+    def __getitem__(self, item:str) -> Database:
         return self.db(item)
 
-    def __contains__(self, item):
-        resp = self.session.head(path=item)
-        if resp.code == 200:
+    def __contains__(self, item:str) -> bool:
+        if self.conn.head(path=item).status == 200:
             return True
         else:
             return False

@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from .doc import Document
+from typing import Any
 
 class Query:
     class Selector:
@@ -33,7 +35,7 @@ class Query:
 # TODO Attchement
 class Database:
     
-    def __init__(self, name, server):
+    def __init__(self, name:str, server: Any):
         """Class for db operations
         
         Args:
@@ -55,13 +57,13 @@ class Database:
             Raises:
                 DatabaseError
         """
-        resp = self.server.session.head(path=f'{self.name}/{docid}')
-        if resp.code in (200, 304):
+        resp = self.server.conn.head(path=f'{self.name}/{docid}')
+        if resp.status in (200, 304):
             return {'rev': resp.headers.get('ETag', '').strip('"'),
                     'size': resp.headers.get('Content-Length'),
                     'date': resp.headers.get('Date')}
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
 
     def get(self, docid, attchments=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False):
         """
@@ -107,16 +109,16 @@ class Database:
             _query['att_encoding_info'] = 'true'
         
         
-        resp = self.server.session.get(f'{self.name}/{docid}', query=_query)
-        if resp.code in (200, 304):
-            return resp.json
-        elif resp.code == 400:
+        resp = self.server.conn.get(f'{self.name}/{docid}', query=_query)
+        if resp.status in (200, 304):
+            return resp.get_data()
+        elif resp.status == 400:
             raise DatabaseError(messeage='The format of the request or revision was invalid')
-        elif resp.code == 404:
+        elif resp.status == 404:
             # raise DatabaseError('Specified database or document ID doesn’t exists')
             return {}
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
 
     def add(self, doc, batch=False):
         """
@@ -147,28 +149,28 @@ class Database:
         _query = {}
         if batch:
             _query['batch'] = 'ok'
-        resp = self.server.session.post(path=self.name, data=doc, query=_query)
-        if resp.code in (201, 202):
-            ret = resp.json
+        resp = self.server.conn.post(path=self.name, data=doc, query=_query)
+        if resp.status in (201, 202):
+            ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
 
     def update(self, docid, doc):
         _doc = self.get(docid)
         _doc.update(doc)
-        resp = self.server.session.put(path=f'{self.name}/{docid}', data=_doc, query={'rev': _doc.get('_rev')})
-        if resp.code in (201, 202):
-            ret = resp.json
+        resp = self.server.conn.put(path=f'{self.name}/{docid}', data=_doc, query={'rev': _doc.get('_rev')})
+        if resp.status in (201, 202):
+            ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
-        elif resp.code == 400:
+        elif resp.status == 400:
             raise DatabaseError(messeage='Invalid request body or parameters')
-        elif resp.code == 404:
+        elif resp.status == 404:
             raise DatabaseError(messeage='Specified database or document ID doesn’t exists')
-        elif resp.code == 409:
+        elif resp.status == 409:
             raise DatabaseError(messeage='Specified revision is not the latest for target document')
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
 
     def delete(self, docid):
         """Marks the specified document as deleted
@@ -183,28 +185,28 @@ class Database:
             DatabaseError
         """
         info = self.doc_info(docid)
-        resp = self.server.session.delete(path=f'{self.name}/{docid}', query={'rev': info.get('rev')})
-        if resp.code in (200, 202):
-            ret = resp.json
+        resp = self.server.conn.delete(path=f'{self.name}/{docid}', query={'rev': info.get('rev')})
+        if resp.status in (200, 202):
+            ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
-        elif resp.code == 400:
+        elif resp.status == 400:
             raise DatabaseError(messeage='Invalid request body or parameters')
-        elif resp.code == 404:
+        elif resp.status == 404:
             raise DatabaseError(messeage='Specified database or document ID doesn’t exists')
-        elif resp.code == 409:
+        elif resp.status == 409:
             raise DatabaseError(messeage='Specified revision is not the latest for target document')
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
 
     def all_docs(self, *keys):
         path = f'{self.name}/_all_docs'
         _keys = list()
         _keys.extend(keys)
         if keys:
-            resp = self.server.session.post(path, data={"keys": _keys})
+            resp = self.server.conn.post(path, data={"keys": _keys})
         else:
-            resp = self.server.session.get(path)
-        return resp.json
+            resp = self.server.conn.get(path)
+        return resp.get_data()
     
     def get_all_docs(self):
         doc = self.all_docs()
@@ -234,13 +236,13 @@ class Database:
             query['execution_status'] = True
             
         path = f'{self.name}/_find'
-        resp = self.server.session.post(path=path, data=query)
-        if resp.code == 200:
-            return resp.json
-        elif resp.code == 400:
+        resp = self.server.conn.post(path=path, data=query)
+        if resp.status == 200:
+            return resp.get_data()
+        elif resp.status == 400:
             raise DatabaseError(messeage='Invalid request')
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
     
     def query(self):
         pass
@@ -257,13 +259,13 @@ class Database:
         #     elif type(doc) == dict:
         #         docs['docs'].append(doc)
         path = f'{self.name}/_bulk_docs'
-        resp = self.server.session.post(path=path, data=docs)
-        if resp.code == 201:
-            return resp.json
-        elif resp.code == 400:
+        resp = self.server.conn.post(path=path, data=docs)
+        if resp.status == 201:
+            return resp.get_data()
+        elif resp.status == 400:
             raise DatabaseError(messeage='The request provided invalid JSON data')
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
         
     
     def bulk_get(self, id_list):
@@ -277,18 +279,18 @@ class Database:
                 docs['docs'].append({'id': _id})
                 
         path = f'{self.name}/_bulk_get'
-        resp = self.server.session.post(path=path, data=docs)
-        if resp.code == 200:
-            ret = resp.json
+        resp = self.server.conn.post(path=path, data=docs)
+        if resp.status == 200:
+            ret = resp.get_data()
             _dosc_list = list()
             if type(ret) is dict:
                 return ret.get('results', list())
             else:
                 return list()
-        elif resp.code == 400:
+        elif resp.status == 400:
             raise DatabaseError(messeage='The request provided invalid JSON data or invalid query parameter')
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
     
     def bulk_update(self, docs_list):
         if type(docs_list) is not list:
@@ -300,33 +302,33 @@ class Database:
         
         docs = {'docs': docs_list}
         path = f'{self.name}/_bulk_docs'
-        resp = self.server.session.post(path=path, data=docs)
-        if resp.code == 201:
-            return resp.json
-        elif resp.code == 400:
+        resp = self.server.conn.post(path=path, data=docs)
+        if resp.status == 201:
+            return resp.get_data()
+        elif resp.status == 400:
             raise DatabaseError(messeage='The request provided invalid JSON data')
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
         
 
     # def purge(self, docinfo):
-    #     resp = self.server.session.post(path=f'{self.name}/_purge')
-    #     if resp.code in (201, 202):
-    #         ret = resp.json
+    #     resp = self.server.conn.post(path=f'{self.name}/_purge')
+    #     if resp.status in (201, 202):
+    #         ret = resp.get_data()
     #         return ret.get('id'), ret.get('rev')
-    #     elif resp.code == 400:
+    #     elif resp.status == 400:
     #         raise DatabaseError('Bad Request – Invalid database name')
-    #     elif resp.code == 500:
+    #     elif resp.status == 500:
     #         raise DatabaseError('Internal server error or timeout')
 
     def __contains__(self, item):
-        resp = self.server.session.head(path=f'{self.name}/{item}')
-        if resp.code in (200, 304):
+        resp = self.server.conn.head(path=f'{self.name}/{item}')
+        if resp.status in (200, 304):
             return True
-        elif resp.code == 404:
+        elif resp.status == 404:
             return False
         else:
-            raise DatabaseError(resp.code)
+            raise DatabaseError(resp.status)
 
     def __iter__(self):
         doc = self.all_docs()

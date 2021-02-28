@@ -5,7 +5,7 @@ import timeit
 
 class PyCouchdbTest():
     def __init__(self):
-        self.s = Server(user='admin', password='admin')
+        self.s = Server(user='admin', password='test')
         if 'speedtestdb' in self.s:
             self.s.delete('speedtestdb')
         self.s.create('speedtestdb')

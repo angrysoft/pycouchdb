@@ -6,7 +6,7 @@ import unittest
 class PyCouchdbTestSingle(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.s = Server(user='admin', password='admin')
+        cls.s = Server(user='admin', password='test')
         if 'testdb' in cls.s:
             print('remove testdb')
             cls.s.delete('testdb')
@@ -72,7 +72,7 @@ class PyCouchdbTestSingle(unittest.TestCase):
 class PyCouchdbTestBulk(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.s = Server(user='admin', password='admin')
+        cls.s = Server(user='admin', password='test')
         if 'testdb' in cls.s:
             print('remove testdb')
             cls.s.delete('testdb')
