@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
-from pycouchdb.connections.urllibcon import UrllibConn
-from .db import Database
 from re import search
+from .db import Database
+from typing import Dict, List, Any
+from pycouchdb.connections.urllibcon import UrllibConn
      
 
 class Server:
@@ -68,11 +68,13 @@ class Server:
         resp = self.conn.get(path='_active_tasks')
         return resp.get_data()
 
-    def all_dbs(self):
+    def all_dbs(self) -> List[str]:
         """Returns a list of all the databases in the CouchDB instance.
         """
-        resp = self.conn.get(path='_all_dbs')
-        return resp.get_data()
+        ret = []
+        if (resp := self.conn.get(path='_all_dbs')).status == 200:
+            ret = resp.get_data()
+        return ret
 
     def dbs_info(self, *keys:str) -> List[Any]:
         """
@@ -87,19 +89,19 @@ class Server:
         Raises:
             ServerError
         """
-        _keys = list()
-        _keys.extend(keys)
-        resp = self.conn.post(path='_dbs_info', data={'keys': _keys})
-        if resp.status == 200:
-            return resp.get_data()
-        else:
+        
+        if (resp := self.conn.post(path='_dbs_info', data={'keys': list(keys)})).status != 200:
             raise ServerError(resp.status)
+        return resp.get_data()
 
-    def cluster_setup(self):
-        pass
+    def get_cluster_setup(self) -> Dict[str, Any]:
+        raise NotImplementedError
+    
+    def set_cluster_setup(self) -> None:
+        raise NotImplementedError
 
-    def db_updates(self, feed=None, timeout=None, heartbeat=None, since=None):
-        args = dict()
+    def db_updates(self, feed:str="", timeout:int=60, heartbeat:int=60000, since:str=""):
+        args: Dict[str, Any] = dict()
         if feed:
             args['feed'] = feed
         if timeout:
@@ -108,7 +110,9 @@ class Server:
             args['heartbeat'] = heartbeat
         if since:
             args['since'] = since
-        raise NotImplementedError
+        if (resp := self.conn.get(path='_db_updates', query=args)).status != 200:
+            raise ServerError(resp.status)
+        return resp.get_data()
 
     def membership(self):
         """Displays the nodes that are part of the cluster as cluster_nodes.
@@ -118,7 +122,18 @@ class Server:
         Returns:
             dict:
         """
-        resp = self.conn.get(path='_membership')
+        if (resp := self.conn.get(path='_membership')).status != 200:
+            raise ServerError(resp.status)
+        return resp.get_data()
+    
+    def set_replicate(self) -> Dict[str, Any]:
+        raise NotImplementedError
+    
+    def is_up(self):
+        """Confirms that the server is up, running, and ready to respond to requests."""
+        
+        if (resp := self.conn.get(path='_up')).status != 200:
+            raise ServerError(resp.status)
         return resp.get_data()
     
     def db(self,name:str):

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from .doc import Document
-from typing import Any
+from typing import Any, Dict
 
 class Query:
     class Selector:
@@ -45,7 +45,7 @@ class Database:
         self.server = server
         self.name = name
 
-    def doc_info(self, docid) -> dict:
+    def doc_info(self, doc_id:str) -> Dict[str, Any]:
         """Minimal amount of information about the specified document.
            
             Args: 
@@ -57,15 +57,15 @@ class Database:
             Raises:
                 DatabaseError
         """
-        resp = self.server.conn.head(path=f'{self.name}/{docid}')
-        if resp.status in (200, 304):
+        
+        if (resp := self.server.conn.head(path=f'{self.name}/{doc_id}')).status in (200, 304):
             return {'rev': resp.headers.get('ETag', '').strip('"'),
                     'size': resp.headers.get('Content-Length'),
                     'date': resp.headers.get('Date')}
         else:
             raise DatabaseError(resp.status)
 
-    def get(self, docid, attchments=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False):
+    def get(self, docid:str, attchments=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False):
         """
             Get docmument by id
             
@@ -172,7 +172,7 @@ class Database:
         else:
             raise DatabaseError(resp.status)
 
-    def delete(self, docid):
+    def delete(self, doc_id:str):
         """Marks the specified document as deleted
         
         Args:
@@ -184,8 +184,8 @@ class Database:
         Raises:
             DatabaseError
         """
-        info = self.doc_info(docid)
-        resp = self.server.conn.delete(path=f'{self.name}/{docid}', query={'rev': info.get('rev')})
+        info = self.doc_info(doc_id)
+        resp = self.server.conn.delete(path=f'{self.name}/{doc_id}', query={'rev': info.get('rev')})
         if resp.status in (200, 202):
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
