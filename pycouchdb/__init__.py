@@ -1,4 +1,4 @@
-# Copyright 2019 AngrySoft Sebastian Zwierzchowski
+# Copyright 2019 - 2021 AngrySoft Sebastian Zwierzchowski
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-__version__ = "0.3"
+__version__ = "0.4"
 
-__all__ = ['Server', 'Database', 'Document', 'ServerError', 'DatabaseError', 'DocumentError']
+__all__ = ['Server', 'Client', 'Database', 'Document', 'ServerError', 'DatabaseError', 'DocumentError']
 
-from .server import Server, ServerError
-from .db import Database, DatabaseError
-from .doc import Document, DocumentError
+from .server import Server
+from .client import Client
+from .db import Database
+from .doc import Document
+from .exceptions import ServerError, DatabaseError, DocumentError

@@ -14,35 +14,20 @@
 
 from .doc import Document
 from typing import Any, Dict
-
-class Query:
-    class Selector:
-        def __init__(self, filed):
-            pass
-    
-    class Fields:
-        pass
-
-    class Sort:
-        pass
-
-    def __init__(self):
-        self._selector = Selector
-        self._selector = {}
-        self._fileds = []
-        self._sort = []
+from .connections import Connection
+from .exceptions import DatabaseError
 
 # TODO Attchement
 class Database:
     
-    def __init__(self, name:str, server: Any):
+    def __init__(self, name:str, connection: Connection):
         """Class for db operations
         
         Args:
             name (str): Database name
-            server (Server): Instance of pycouchdb.server.Server
+            connection (Connection): instance of connection to server  
         """
-        self.server = server
+        self.conn = connection
         self.name = name
 
     def doc_info(self, doc_id:str) -> Dict[str, Any]:
@@ -58,14 +43,14 @@ class Database:
                 DatabaseError
         """
         
-        if (resp := self.server.conn.head(path=f'{self.name}/{doc_id}')).status in (200, 304):
-            return {'rev': resp.headers.get('ETag', '').strip('"'),
-                    'size': resp.headers.get('Content-Length'),
-                    'date': resp.headers.get('Date')}
+        if (resp := self.conn.head(path=f'{self.name}/{doc_id}')).status in (200, 304):
+            return {'rev': resp.get_headers().get('ETag', '').strip('"'),
+                    'size': resp.get_headers().get('Content-Length'),
+                    'date': resp.get_headers().get('Date')}
         else:
             raise DatabaseError(resp.status)
 
-    def get(self, docid:str, attchments=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False):
+    def get(self, docid:str, attchments:bool=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False):
         """
             Get docmument by id
             
@@ -109,7 +94,7 @@ class Database:
             _query['att_encoding_info'] = 'true'
         
         
-        resp = self.server.conn.get(f'{self.name}/{docid}', query=_query)
+        resp = self.conn.get(f'{self.name}/{docid}', query=_query)
         if resp.status in (200, 304):
             return resp.get_data()
         elif resp.status == 400:
@@ -149,17 +134,17 @@ class Database:
         _query = {}
         if batch:
             _query['batch'] = 'ok'
-        resp = self.server.conn.post(path=self.name, data=doc, query=_query)
+        resp = self.conn.post(path=self.name, data=doc, query=_query)
         if resp.status in (201, 202):
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
         else:
             raise DatabaseError(resp.status)
 
-    def update(self, docid, doc):
+    def update(self, docid:str, doc: Dict[str, Any]):
         _doc = self.get(docid)
         _doc.update(doc)
-        resp = self.server.conn.put(path=f'{self.name}/{docid}', data=_doc, query={'rev': _doc.get('_rev')})
+        resp = self.conn.put(path=f'{self.name}/{docid}', data=_doc, query={'rev': _doc.get('_rev')})
         if resp.status in (201, 202):
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
@@ -185,7 +170,7 @@ class Database:
             DatabaseError
         """
         info = self.doc_info(doc_id)
-        resp = self.server.conn.delete(path=f'{self.name}/{doc_id}', query={'rev': info.get('rev')})
+        resp = self.conn.delete(path=f'{self.name}/{doc_id}', query={'rev': info.get('rev')})
         if resp.status in (200, 202):
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
@@ -203,9 +188,9 @@ class Database:
         _keys = list()
         _keys.extend(keys)
         if keys:
-            resp = self.server.conn.post(path, data={"keys": _keys})
+            resp = self.conn.post(path, data={"keys": _keys})
         else:
-            resp = self.server.conn.get(path)
+            resp = self.conn.get(path)
         return resp.get_data()
     
     def get_all_docs(self):
@@ -236,16 +221,13 @@ class Database:
             query['execution_status'] = True
             
         path = f'{self.name}/_find'
-        resp = self.server.conn.post(path=path, data=query)
+        resp = self.conn.post(path=path, data=query)
         if resp.status == 200:
             return resp.get_data()
         elif resp.status == 400:
             raise DatabaseError(messeage='Invalid request')
         else:
             raise DatabaseError(resp.status)
-    
-    def query(self):
-        pass
     
     def bulk_add(self, docs_list):
         if type(docs_list) is not list:
@@ -259,7 +241,7 @@ class Database:
         #     elif type(doc) == dict:
         #         docs['docs'].append(doc)
         path = f'{self.name}/_bulk_docs'
-        resp = self.server.conn.post(path=path, data=docs)
+        resp = self.conn.post(path=path, data=docs)
         if resp.status == 201:
             return resp.get_data()
         elif resp.status == 400:
@@ -279,7 +261,7 @@ class Database:
                 docs['docs'].append({'id': _id})
                 
         path = f'{self.name}/_bulk_get'
-        resp = self.server.conn.post(path=path, data=docs)
+        resp = self.conn.post(path=path, data=docs)
         if resp.status == 200:
             ret = resp.get_data()
             _dosc_list = list()
@@ -302,7 +284,7 @@ class Database:
         
         docs = {'docs': docs_list}
         path = f'{self.name}/_bulk_docs'
-        resp = self.server.conn.post(path=path, data=docs)
+        resp = self.conn.post(path=path, data=docs)
         if resp.status == 201:
             return resp.get_data()
         elif resp.status == 400:
@@ -312,7 +294,7 @@ class Database:
         
 
     # def purge(self, docinfo):
-    #     resp = self.server.conn.post(path=f'{self.name}/_purge')
+    #     resp = self.conn.post(path=f'{self.name}/_purge')
     #     if resp.status in (201, 202):
     #         ret = resp.get_data()
     #         return ret.get('id'), ret.get('rev')
@@ -322,7 +304,7 @@ class Database:
     #         raise DatabaseError('Internal server error or timeout')
 
     def __contains__(self, item):
-        resp = self.server.conn.head(path=f'{self.name}/{item}')
+        resp = self.conn.head(path=f'{self.name}/{item}')
         if resp.status in (200, 304):
             return True
         elif resp.status == 404:
@@ -353,34 +335,3 @@ class Database:
         else:
             value['_id'] = key
             self.add(value)
-
-
-class DatabaseError(Exception):
-    _codes = {
-            400: 'Invalid database name',
-            401: 'Read/Write privileges required',
-            404: 'Requested database not found',
-            409: 'A Conflicting Document with same ID already exists',
-            412: 'Database already exists',
-            415: 'Bad Content-Type value',
-            417: 'Expectation Failed – Occurs when at least one document was rejected by a validation function',
-            500: 'Query execution error'
-               }
-    
-    def __init__(self, code=0, messeage=f'Unknow Error'):
-        self.message = self._codes.get(code, messeage)   
-
-
-class DocumentError(Exception):
-    _codes = {
-            400: 'Invalid database name',
-            401: 'Read/Write privileges required',
-            404: 'Specified database or document ID doesn’t exists',
-            409: 'A Conflicting Document with same ID already exists',
-            412: 'Database already exists',
-            415: 'Bad Content-Type value',
-            500: 'Query execution error'
-               }
-    
-    def __init__(self, code=0, messeage=f'Unknow Error'):
-        self.message = self._codes.get(code, messeage)
