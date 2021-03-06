@@ -5,7 +5,7 @@ import timeit
 
 class PyCouchdbTest():
     def __init__(self):
-        self.s = Server()
+        self.s = Server('http://admin:test@localhost:5984')
         if 'speedtestdb' in self.s:
             self.s.delete('speedtestdb')
         self.db = self.s.create('speedtestdb')
@@ -33,14 +33,13 @@ class PyCouchdbTest():
 
 if __name__ == '__main__':
     test = PyCouchdbTest()
-    print('restart')
     # import os
     # os.system('systemctl restart couchdb')
     # from time import sleep
     # sleep(1)
     add_t = timeit.timeit(test.test_c_db_add, number=1)
     get_t = timeit.timeit(test.test_d_db_get, number=1)
-    # del_t = timeit.timeit(test.test_f_del, number=1)
+    del_t = timeit.timeit(test.test_f_del, number=1)
     print(f'Add {test._to} in : {add_t}')
     print(f'Get {test._to} in : {get_t}')
     # print(f'Del time : {del_t}')

@@ -18,18 +18,14 @@ class PyCurlConn(Connection):
         self.user = url_data.username
         self.password = url_data.password
         self.url = f'{url_data.scheme}://{url_data.hostname}:{int(url_data.port or 5984)}'
-        self.curl = pycurl.Curl()
-       
-        # self.errors_retryable = (errno.EPIPE, errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNREFUSED,
-        #                          errno.ECONNABORTED, errno.EHOSTDOWN, errno.EHOSTUNREACH,
-        #                          errno.ENETRESET, errno.ENETUNREACH, errno.ENETDOWN)
-    
+        self.curl = None
         if self.user and self.password:
             self.headers['Authorization'] = f"Basic {b64encode(f'{self.user}:{self.password}'.encode('utf-8')).decode('ascii')}"
     
     def get(self, path: str, query: Dict[str, Any]) -> Response:
         buffer = BytesIO()
         ret = PyCurlResponse()
+        self.curl = pycurl.Curl()
         self.set_url(path=path, query=query)
         self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
         self.curl.perform()
@@ -40,6 +36,7 @@ class PyCurlConn(Connection):
     
     def post(self, path: str, data: Any, headers: Dict[str, str] = {}, query: Dict[str, Any] = {}) -> Response:
         buffer = BytesIO()
+        self.curl = pycurl.Curl()
         self.set_url(path=path, query=query)
         ret = PyCurlResponse()
         self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
@@ -54,6 +51,7 @@ class PyCurlConn(Connection):
     def put(self, path: str, data: Any = {}, headers: Dict[str, str] = {}, query: Dict[str, Any] = {}) -> Response:
         buffer = BytesIO()
         ret = PyCurlResponse()
+        self.curl = pycurl.Curl()
         self.set_url(path=path, query=query)
         self.curl.setopt(pycurl.HEADERFUNCTION, ret.put_header)
         self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
@@ -64,20 +62,25 @@ class PyCurlConn(Connection):
         ret.set_status(self.curl.getinfo(pycurl.HTTP_CODE))
         ret.set_data(buffer.getvalue())
         self.curl.close()
-        return PyCurlResponse(self.curl.getinfo(pycurl.HTTP_CODE), buffer.getvalue())
+        return ret
     
-    def delete(self, path: str, query: Dict[str, Any]) -> Response:
+    def delete(self, path: str, query: Dict[str, Any] = {}) -> Response:
         buffer = BytesIO()
+        self.curl = pycurl.Curl()
+        ret = PyCurlResponse()
         self.set_url(path=path, query=query)
         self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
         self.curl.setopt(pycurl.CUSTOMREQUEST, 'DELETE')
         self.curl.perform()
+        ret.set_status(self.curl.getinfo(pycurl.HTTP_CODE))
+        ret.set_data(buffer.getvalue())
         self.curl.close()
-        return PyCurlResponse(self.curl.getinfo(pycurl.HTTP_CODE), buffer.getvalue())
+        return ret
     
     def head(self, path: str, query: Dict[str, Any] = {}) -> Response:
         buffer = BytesIO()
         ret = PyCurlResponse()
+        self.curl = pycurl.Curl()
         self.set_url(path=path, query=query)
         self.curl.setopt(pycurl.HEADERFUNCTION, ret.put_header)
         self.curl.setopt(pycurl.NOBODY, True)
@@ -102,9 +105,8 @@ class PyCurlConn(Connection):
             
         self.curl.setopt(pycurl.URL, f'{self.url}/{quote(path)}{_query}')
         if headers:
-            self.curl.setopt(pycurl.HTTPHEADER, [f'{k}={v}' for (k,v) in headers.items()])
+            self.curl.setopt(pycurl.HTTPHEADER, [f'{k}:{v}' for (k,v) in headers.items()])
         
-        print(headers, f'{self.url}/{quote(path)}{_query}')
 
 
 class PyCurlResponse(Response):
@@ -130,12 +132,9 @@ class PyCurlResponse(Response):
         return self._headers.copy()
     
     def put_header(self, head_line:bytes):
-        line = head_line.decode().strip()
-        print('line', type(line))
-        # if (line := head_line.decode().strip()).index(':') > 0:
-        #     key , val = line.split(':', 1)
-        #     self._headers[key] = val
-        # print('header', self._headers)
+        if (line := head_line.decode()).find(":") > 0:
+                key , val = line.split(':', 1)
+                self._headers[key.strip()] = val.strip()
         
         
     
