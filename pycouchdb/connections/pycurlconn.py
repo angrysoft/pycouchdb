@@ -29,36 +29,64 @@ class PyCurlConn(Connection):
     
     def get(self, path: str, query: Dict[str, Any]) -> Response:
         buffer = BytesIO()
+        ret = PyCurlResponse()
         self.set_url(path=path, query=query)
         self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
         self.curl.perform()
+        ret.set_status(self.curl.getinfo(pycurl.HTTP_CODE))
+        ret.set_data(buffer.getvalue())
         self.curl.close()
-        return PyCurlResponse(self.curl.getinfo(pycurl.HTTP_CODE), buffer.getvalue())
+        return ret
     
-    def post(self, path: str, data: Any, headers: Dict[str, str], query: Dict[str, Any]) -> Response:
+    def post(self, path: str, data: Any, headers: Dict[str, str] = {}, query: Dict[str, Any] = {}) -> Response:
         buffer = BytesIO()
         self.set_url(path=path, query=query)
+        ret = PyCurlResponse()
         self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
-        self.curl.setopt(pycurl.POSTFIELDS, self.set_data(data))
+        if data:
+            self.curl.setopt(pycurl.POSTFIELDS, self.set_data(data))
         self.curl.perform()
+        ret.set_status(self.curl.getinfo(pycurl.HTTP_CODE))
+        ret.set_data(buffer.getvalue())
         self.curl.close()
-        return PyCurlResponse(self.curl.getinfo(pycurl.HTTP_CODE), buffer.getvalue())
+        return ret
     
-    def put(self, path: str, data: Any, headers: Dict[str, str], query: Dict[str, Any]) -> Response:
+    def put(self, path: str, data: Any = {}, headers: Dict[str, str] = {}, query: Dict[str, Any] = {}) -> Response:
         buffer = BytesIO()
+        ret = PyCurlResponse()
         self.set_url(path=path, query=query)
+        self.curl.setopt(pycurl.HEADERFUNCTION, ret.put_header)
         self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
-        self.curl.setopt(pycurl.POSTFIELDS, self.set_data(data))
+        self.curl.setopt(pycurl.CUSTOMREQUEST, 'PUT')
+        if data:
+            self.curl.setopt(pycurl.POSTFIELDS, self.set_data(data))
         self.curl.perform()
+        ret.set_status(self.curl.getinfo(pycurl.HTTP_CODE))
+        ret.set_data(buffer.getvalue())
         self.curl.close()
         return PyCurlResponse(self.curl.getinfo(pycurl.HTTP_CODE), buffer.getvalue())
     
     def delete(self, path: str, query: Dict[str, Any]) -> Response:
-        return super().delete(path, query=query)
+        buffer = BytesIO()
+        self.set_url(path=path, query=query)
+        self.curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
+        self.curl.setopt(pycurl.CUSTOMREQUEST, 'DELETE')
+        self.curl.perform()
+        self.curl.close()
+        return PyCurlResponse(self.curl.getinfo(pycurl.HTTP_CODE), buffer.getvalue())
     
-    def head(self, path: str, query: Dict[str, Any]) -> Response:
-        return super().head(path, query=query)
-    
+    def head(self, path: str, query: Dict[str, Any] = {}) -> Response:
+        buffer = BytesIO()
+        ret = PyCurlResponse()
+        self.set_url(path=path, query=query)
+        self.curl.setopt(pycurl.HEADERFUNCTION, ret.put_header)
+        self.curl.setopt(pycurl.NOBODY, True)
+        self.curl.perform()
+        ret.set_status(self.curl.getinfo(pycurl.HTTP_CODE))
+        ret.set_data(buffer.getvalue())
+        self.curl.close()
+        return ret
+        
     def set_data(self, data:Any):
         if type(data) is dict:
             data = Json.dumps(data)
@@ -72,25 +100,42 @@ class PyCurlConn(Connection):
         if query:
             _query = f"?{'&'.join([f'{k}={v}' for (k,v) in query.items()])}"
             
-        # req = Request(url=f'{self.url}/{quote(path)}{_query}', method=method, data=data, headers=headers)
         self.curl.setopt(pycurl.URL, f'{self.url}/{quote(path)}{_query}')
         if headers:
             self.curl.setopt(pycurl.HTTPHEADER, [f'{k}={v}' for (k,v) in headers.items()])
+        
+        print(headers, f'{self.url}/{quote(path)}{_query}')
 
 
 class PyCurlResponse(Response):
-    def __init__(self, status:int, data:Any) -> None:
+    def __init__(self, status:int = 500, data:Any = {}) -> None:
         self._status = status
         self._data = data
+        self._headers = {}
+    
+    def set_status(self, status:int):
+        self._status = status
         
     @property
     def status(self) -> int:
         return self._status
     
+    def set_data(self, data:Any):
+        self._data = data
+    
     def get_data(self) -> Any:
          return Json.loads(self._data) 
     
     def get_headers(self) -> Any:
-        return super().get_headers()
+        return self._headers.copy()
+    
+    def put_header(self, head_line:bytes):
+        line = head_line.decode().strip()
+        print('line', type(line))
+        # if (line := head_line.decode().strip()).index(':') > 0:
+        #     key , val = line.split(':', 1)
+        #     self._headers[key] = val
+        # print('header', self._headers)
+        
         
     
