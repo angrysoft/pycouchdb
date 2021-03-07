@@ -31,3 +31,5 @@ class DocumentError(Exception):
     
     def __init__(self, code=0, messeage=f'Unknow Error'):
         self.message = self._codes.get(code, messeage)
+
+

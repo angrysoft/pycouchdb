@@ -1,12 +1,13 @@
 #!/usr/bin/python3
-from pycouchdb import Server, DatabaseError
+from pycouchdb import Client, DatabaseError
+from pycouchdb.connections.http import HttpClientConn
 import unittest
 
 
 class PyCouchdbTestSingle(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.s = Server(user='admin', password='test')
+        cls.s = Client('http://admin:test@localhost', connection_engine=HttpClientConn)
         if 'testdb' in cls.s:
             print('remove testdb')
             cls.s.delete('testdb')
@@ -14,7 +15,7 @@ class PyCouchdbTestSingle(unittest.TestCase):
         cls.s.create('testdb')
         print('db created')
         print('accesing db')
-        cls.db = cls.s.db('testdb')
+        cls.db = cls.s.get_db('testdb')
         
         cls.docs = [{'number': 1, 'name': 'one', 'type': 'number'},
                      {'number': 2, 'name': 'two', 'type': 'number'},
@@ -27,13 +28,11 @@ class PyCouchdbTestSingle(unittest.TestCase):
                      {'letter': 'd', 'name': 'd', 'type': 'letter'},
                      {'letter': 'e', 'name': 'e', 'type': 'letter'}]
 
-    def test_a_server_info(self):
-        print(f'Server info : {self.s.version}, {self.s.uuid}, {self.s.vendor}')
 
     def test_c_db_add(self):
         print('\nAdding dosc:')
         for i, d in enumerate(self.docs):
-            d['_id'] = i
+            d['_id'] = str(i)
             print(self.db.add(d))
 
     def test_d_db_update(self):
@@ -72,7 +71,7 @@ class PyCouchdbTestSingle(unittest.TestCase):
 class PyCouchdbTestBulk(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.s = Server(user='admin', password='test')
+        cls.s = Client('http://admin:test@localhost', connection_engine=HttpClientConn)
         if 'testdb' in cls.s:
             print('remove testdb')
             cls.s.delete('testdb')
@@ -80,7 +79,7 @@ class PyCouchdbTestBulk(unittest.TestCase):
         cls.s.create('testdb')
         print('db created')
         print('accesing db')
-        cls.db = cls.s.db('testdb')
+        cls.db = cls.s.get_db('testdb')
         
         cls.docs = [{'_id':'0', 'number': 1, 'name': 'one', 'type': 'number'},
                     {'_id':'1', 'number': 2, 'name': 'two', 'type': 'number'},
@@ -93,18 +92,19 @@ class PyCouchdbTestBulk(unittest.TestCase):
                     {'_id':'8', 'letter': 'd', 'name': 'd', 'type': 'letter'},
                     {'_id':'9', 'letter': 'e', 'name': 'e', 'type': 'letter'}]
     
-    def test_a_bulk_add(self):
+    def test_a_add_many(self):
         print('\nBulk add docs')
-        print(self.db.bulk_add(self.docs))
+        print(self.db.add_many(self.docs))
     
-    def test_b_bulk_get(self):
+    def test_b_get_many(self):
          print('\nBulk get docs')
-         print(self.db.bulk_get([str(x) for x in range(0,11)]))
+         
+         print(self.db.get_many([{"id": str(x)} for x in range(0,11)]))
     
     def test_c_bule_update(self):
         print('\nBulk update docs')
-        docs = self.db.bulk_get([str(x) for x in range(0,10)])
-        docs_to_update = list()
+        docs = self.db.get_many([{"id": str(x)} for x in range(0,10)])
+        docs_to_update = []
         for i, x in enumerate(docs):
             doc = x['docs'][0].get('ok', {})
             doc['n'] = i

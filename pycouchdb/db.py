@@ -1,4 +1,4 @@
-# Copyright 2019 AngrySoft Sebastian Zwierzchowski
+# Copyright 2019 - 2021 AngrySoft Sebastian Zwierzchowski
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,9 @@
 # limitations under the License.
 
 from .doc import Document
-from typing import Any, Dict
 from .connections import Connection
 from .exceptions import DatabaseError
+from typing import Any, Dict, List, Tuple
 
 # TODO Attchement
 class Database:
@@ -50,7 +50,45 @@ class Database:
         else:
             raise DatabaseError(resp.status)
 
-    def get(self, docid:str, attchments:bool=False, att_encoding_info=False, atts_since=[], conflicts=False, deleted_conflicts=False, latest=False):
+
+    def add(self, doc:Dict[Any, Any], batch:bool = False) -> Tuple[str, str]:
+        """Creates a new document in database
+            
+            Args:
+                doc (dict): Document ID. 
+                batch (bool): Stores document in batch mode
+             
+            Returns:
+                tuple: document id, revision
+            
+            Raises:
+                DatabaseError
+            
+            You can write documents to the database at a higher rate by using the 
+            batch option. This collects document writes together in memory
+            (on a per-user basis) before they are committed to disk.
+            This increases the risk of the documents not being stored in 
+            the event of a failure, since the documents are not written 
+            to disk immediately.
+        """
+        query={}
+        if batch:
+            query={'batch': 'ok'}
+        
+        if type(doc.get('_id', '')) is not str:
+            raise DatabaseError("_id: need to be a str")
+
+        if (resp := self.conn.post(path=self.name, data=doc, query=query)).status in (201, 202):
+            ret = resp.get_data()
+            return ret.get('id'), ret.get('rev')
+        else:
+            raise DatabaseError(resp.status)
+    
+    def add_many(self, docs: List[Dict[Any, Any]]):
+        pass
+    
+    def get(self, doc_id:str, attachments:bool=False, att_encoding_info:bool=False,
+            atts_since:List[str]=[], conflicts:bool=False, deleted_conflicts:bool=False, latest:bool=False):
         """
             Get docmument by id
             
@@ -84,17 +122,17 @@ class Database:
         # TODO query options
         
         _query = {}
+        headers = {}
         
-        if attchments:
-            headers = {'Accept': 'multipart/related',
-                       'Accept': 'multipart/mixed'}
+        if attachments:
+            headers.update({'Accept': 'application/json, multipart/related, multipart/mixed, text/plain'})
             _query['attachments'] =  'true'
         
         if att_encoding_info:
             _query['att_encoding_info'] = 'true'
         
         
-        resp = self.conn.get(f'{self.name}/{docid}', query=_query)
+        resp = self.conn.get(f'{self.name}/{doc_id}', query=_query)
         if resp.status in (200, 304):
             return resp.get_data()
         elif resp.status == 400:
@@ -104,47 +142,32 @@ class Database:
             return {}
         else:
             raise DatabaseError(resp.status)
-
-    def add(self, doc, batch=False):
-        """
-            Creates a new document in database
-            
-            Args:
-                doc (dict): Document ID. 
-                batch (bool): Stores document in batch mode
-             
-            Returns:
-                tuple: document id, revision
-            
-            Raises:
-                DatabaseError
-            
-            You can write documents to the database at a higher rate by using the 
-            batch option. This collects document writes together in memory
-            (on a per-user basis) before they are committed to disk.
-            This increases the risk of the documents not being stored in 
-            the event of a failure, since the documents are not written 
-            to disk immediately.
-        """
-        
-        if '_id' in doc:
-            if type(doc['_id']) is not str:
-                doc['_id'] = str(doc['_id'])
-
-        _query = {}
-        if batch:
-            _query['batch'] = 'ok'
-        resp = self.conn.post(path=self.name, data=doc, query=_query)
-        if resp.status in (201, 202):
+    
+    def get_many(self,  ids: List[Dict[str, str]]) -> List[Dict[Any, Any]]:
+        headers:Dict[str,str] = {'Accept': 'application/json, multipart/related, multipart/mixed'}
+                
+        resp = self.conn.post(path=f'{self.name}/_bulk_get', data=ids, headers=headers)
+        if resp.status == 200:
             ret = resp.get_data()
-            return ret.get('id'), ret.get('rev')
+            return ret.get('results', [])
+        elif resp.status == 400:
+            raise DatabaseError(messeage='The request provided invalid JSON data or invalid query parameter')
         else:
             raise DatabaseError(resp.status)
 
-    def update(self, docid:str, doc: Dict[str, Any]):
-        _doc = self.get(docid)
+    def update(self, doc_id:str, doc: Dict[str, Any], batch:bool = False) -> Tuple[str, str]:
+        headers = {'Content-Type': 'application/json, multipart/related'}
+        _doc = self.get(doc_id)
         _doc.update(doc)
-        resp = self.conn.put(path=f'{self.name}/{docid}', data=_doc, query={'rev': _doc.get('_rev')})
+        
+        query={'rev': _doc.get('_rev')}
+        if batch:
+            query['batch'] = 'ok'
+        
+        resp = self.conn.put(path=f'{self.name}/{doc_id}',
+                             data=_doc,
+                             query=query,
+                             headers=headers)
         if resp.status in (201, 202):
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
@@ -157,7 +180,7 @@ class Database:
         else:
             raise DatabaseError(resp.status)
 
-    def delete(self, doc_id:str):
+    def delete(self, doc_id:str, batch:bool = False) -> Tuple[str, str]:
         """Marks the specified document as deleted
         
         Args:
@@ -170,7 +193,10 @@ class Database:
             DatabaseError
         """
         info = self.doc_info(doc_id)
-        resp = self.conn.delete(path=f'{self.name}/{doc_id}', query={'rev': info.get('rev')})
+        query={'rev': info.get('rev')}
+        if batch:
+            query['batch'] = 'ok'
+        resp = self.conn.delete(path=f'{self.name}/{doc_id}', query=query)
         if resp.status in (200, 202):
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
@@ -183,24 +209,25 @@ class Database:
         else:
             raise DatabaseError(resp.status)
 
-    def all_docs(self, *keys):
+    def all_docs(self, *keys:str) -> Dict[str, Any]:
         path = f'{self.name}/_all_docs'
-        _keys = list()
-        _keys.extend(keys)
         if keys:
-            resp = self.conn.post(path, data={"keys": _keys})
+            resp = self.conn.post(path, data={"keys": list(keys)})
         else:
             resp = self.conn.get(path)
         return resp.get_data()
     
-    def get_all_docs(self):
-        doc = self.all_docs()
-        rows = doc.get('rows')
-        i = 0
-        while i <= (len(rows)-1):
-            doc = rows[i]
-            i += 1
-            yield Document.from_dict(self.get(doc['id']), self)
+    def get_all(self):
+        docs = self.all_docs()
+        for doc in docs.get('rows', []):
+            yield self.get(doc["id"])
+            
+        # rows = doc.get('rows')
+        # i = 0
+        # while i <= (len(rows)-1):
+        #     doc = rows[i]
+        #     i += 1
+            yield self.get(doc['id'])
 
     def find(self, selector={}, fields=[], sort=[], limit=25, skip=0, execution_status=False):
         query = {
@@ -248,31 +275,6 @@ class Database:
             raise DatabaseError(messeage='The request provided invalid JSON data')
         else:
             raise DatabaseError(resp.status)
-        
-    
-    def bulk_get(self, id_list):
-        if type(id_list) is not list:
-            raise ValueError(f'args List expected not {type(id_list)}')
-        docs = {'docs': list()}
-        for _id in id_list:
-            if type(_id) == dict:
-                docs['docs'].append(_id)
-            elif type(_id) == str:
-                docs['docs'].append({'id': _id})
-                
-        path = f'{self.name}/_bulk_get'
-        resp = self.conn.post(path=path, data=docs)
-        if resp.status == 200:
-            ret = resp.get_data()
-            _dosc_list = list()
-            if type(ret) is dict:
-                return ret.get('results', list())
-            else:
-                return list()
-        elif resp.status == 400:
-            raise DatabaseError(messeage='The request provided invalid JSON data or invalid query parameter')
-        else:
-            raise DatabaseError(resp.status)
     
     def bulk_update(self, docs_list):
         if type(docs_list) is not list:
@@ -302,8 +304,13 @@ class Database:
     #         raise DatabaseError('Bad Request – Invalid database name')
     #     elif resp.status == 500:
     #         raise DatabaseError('Internal server error or timeout')
+    
+    def get_design_docs(self):
+        pass
+    
+    
 
-    def __contains__(self, item):
+    def __contains__(self, item:str):
         resp = self.conn.head(path=f'{self.name}/{item}')
         if resp.status in (200, 304):
             return True
@@ -326,10 +333,10 @@ class Database:
         else:
             raise StopIteration
 
-    def __getitem__(self, item):
+    def __getitem__(self, item:str):
         return self.get(item)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key:str, value: Any):
         if key in self:
             self.update(key, value)
         else:
