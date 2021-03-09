@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from .doc import Document
+from __future__ import annotations
+from dataclasses import dataclass
+from re import L
 from .connections import Connection
 from .exceptions import DatabaseError
 from typing import Any, Dict, List, Tuple
@@ -85,15 +86,21 @@ class Database:
             raise DatabaseError(resp.status)
     
     def add_many(self, docs: List[Dict[Any, Any]]):
-        pass
+        resp = self.conn.post(path=f'{self.name}/_bulk_docs', data={'docs': docs})
+        if resp.status == 201:
+            return resp.get_data()
+        elif resp.status == 400:
+            raise DatabaseError(messeage='The request provided invalid JSON data')
+        else:
+            raise DatabaseError(resp.status)
     
     def get(self, doc_id:str, attachments:bool=False, att_encoding_info:bool=False,
             atts_since:List[str]=[], conflicts:bool=False, deleted_conflicts:bool=False, latest:bool=False):
         """
-            Get docmument by id
+            Get document by id
             
             Args:
-                docid (str): Document ID
+                doc_id (str): Document ID
                 attachments (bool): Includes attachments bodies in response.Default is false
                 att_encoding_info (bool): Includes encoding
             
@@ -138,7 +145,7 @@ class Database:
         elif resp.status == 400:
             raise DatabaseError(messeage='The format of the request or revision was invalid')
         elif resp.status == 404:
-            # raise DatabaseError('Specified database or document ID doesn’t exists')
+            # Specified database or document ID doesn’t exists
             return {}
         else:
             raise DatabaseError(resp.status)
@@ -180,11 +187,20 @@ class Database:
         else:
             raise DatabaseError(resp.status)
 
+    def update_many(self, docs_list: List[Dict[str, str]]):        
+        resp = self.conn.post(path=f'{self.name}/_bulk_docs', data={'docs': docs_list})
+        if resp.status == 201:
+            return resp.get_data()
+        elif resp.status == 400:
+            raise DatabaseError(messeage='The request provided invalid JSON data')
+        else:
+            raise DatabaseError(resp.status)
+    
     def delete(self, doc_id:str, batch:bool = False) -> Tuple[str, str]:
         """Marks the specified document as deleted
         
         Args:
-            docid (str): Document ID
+            doc_id (str): Document ID
         
         Return:
             tuple: document id rev
@@ -193,6 +209,7 @@ class Database:
             DatabaseError
         """
         info = self.doc_info(doc_id)
+        
         query={'rev': info.get('rev')}
         if batch:
             query['batch'] = 'ok'
@@ -208,47 +225,25 @@ class Database:
             raise DatabaseError(messeage='Specified revision is not the latest for target document')
         else:
             raise DatabaseError(resp.status)
+    
+    def list_documents_names(self) -> List[Dict[str, Any]]:
+        ret = []
+        if (resp := self.conn.get(path=f'{self.name}/_all_docs')).status == 200:
+            ret = resp.get_data().get('rows', [])
+        return ret
 
-    def all_docs(self, *keys:str) -> Dict[str, Any]:
-        path = f'{self.name}/_all_docs'
-        if keys:
-            resp = self.conn.post(path, data={"keys": list(keys)})
-        else:
-            resp = self.conn.get(path)
-        return resp.get_data()
+    # def all_docs(self, *keys:str) -> Dict[str, Any]:
+    #     path = f'{self.name}/_all_docs'
+    #     if keys:
+    #         resp = self.conn.post(path, data={"keys": list(keys)})
     
     def get_all(self):
-        docs = self.all_docs()
-        for doc in docs.get('rows', []):
+        docs:List[Dict[str, Any]] = self.list_documents_names()
+        for doc in docs:
             yield self.get(doc["id"])
-            
-        # rows = doc.get('rows')
-        # i = 0
-        # while i <= (len(rows)-1):
-        #     doc = rows[i]
-        #     i += 1
-            yield self.get(doc['id'])
 
-    def find(self, selector={}, fields=[], sort=[], limit=25, skip=0, execution_status=False):
-        query = {
-            'selector': selector,
-        }
-        if fields:
-            query['fileds'] = fields
-        
-        if sort:
-            query['sort'] = sort
-        
-        query['limit'] = limit # defautl 25
-        
-        if skip:
-            query['skip'] = skip
-        
-        if execution_status:
-            query['execution_status'] = True
-            
-        path = f'{self.name}/_find'
-        resp = self.conn.post(path=path, data=query)
+    def find(self, query: Query):
+        resp = self.conn.post(path=f'{self.name}/_find', data=query.to_json())
         if resp.status == 200:
             return resp.get_data()
         elif resp.status == 400:
@@ -256,60 +251,27 @@ class Database:
         else:
             raise DatabaseError(resp.status)
     
-    def bulk_add(self, docs_list):
-        if type(docs_list) is not list:
-            raise ValueError(f'args List expected not {type(docs_list)}')
-            
-        docs = {'docs': docs_list}
-        
-        # for doc in docs:
-        #     if isinstance(doc, Document):
-        #         docs['docs'].append()
-        #     elif type(doc) == dict:
-        #         docs['docs'].append(doc)
-        path = f'{self.name}/_bulk_docs'
-        resp = self.conn.post(path=path, data=docs)
-        if resp.status == 201:
-            return resp.get_data()
+    def purge(self, docinfo:Dict[str, List[str]]):
+        """A database purge permanently removes the references to documents in the database.
+        Normal deletion of a document within CouchDB does not remove the document from the database,
+        instead, the document is marked as _deleted=true (and a new revision is created).
+        This is to ensure that deleted documents can be replicated to other databases as having been deleted.
+        This also means that you can check the status of a document and identify that the document has been deleted by its absence.
+        The purge request must include the document IDs, and for each document ID, one or more revisions that must be purged.
+        Documents can be previously deleted, but it is not necessary. Revisions must be leaf revisions.
+        """
+        resp = self.conn.post(path=f'{self.name}/_purge', data=docinfo)
+        if resp.status in (201, 202):
+            ret = resp.get_data()
+            return ret.get('id'), ret.get('rev')
         elif resp.status == 400:
-            raise DatabaseError(messeage='The request provided invalid JSON data')
-        else:
-            raise DatabaseError(resp.status)
-    
-    def bulk_update(self, docs_list):
-        if type(docs_list) is not list:
-            raise ValueError(f'args List expected not {type(docs_list)}')
-        
-        for doc in docs_list:
-            if '_id' not in doc:
-                raise ValueError('Missing id in doc')
-        
-        docs = {'docs': docs_list}
-        path = f'{self.name}/_bulk_docs'
-        resp = self.conn.post(path=path, data=docs)
-        if resp.status == 201:
-            return resp.get_data()
-        elif resp.status == 400:
-            raise DatabaseError(messeage='The request provided invalid JSON data')
-        else:
-            raise DatabaseError(resp.status)
-        
-
-    # def purge(self, docinfo):
-    #     resp = self.conn.post(path=f'{self.name}/_purge')
-    #     if resp.status in (201, 202):
-    #         ret = resp.get_data()
-    #         return ret.get('id'), ret.get('rev')
-    #     elif resp.status == 400:
-    #         raise DatabaseError('Bad Request – Invalid database name')
-    #     elif resp.status == 500:
-    #         raise DatabaseError('Internal server error or timeout')
+            raise DatabaseError('Bad Request – Invalid database name')
+        elif resp.status == 500:
+            raise DatabaseError('Internal server error or timeout')
     
     def get_design_docs(self):
         pass
     
-    
-
     def __contains__(self, item:str):
         resp = self.conn.head(path=f'{self.name}/{item}')
         if resp.status in (200, 304):
@@ -320,8 +282,7 @@ class Database:
             raise DatabaseError(resp.status)
 
     def __iter__(self):
-        doc = self.all_docs()
-        self.rows = doc.get('rows')
+        self.rows = self.list_documents_names()
         self.i = 0
         return self
 
@@ -342,3 +303,29 @@ class Database:
         else:
             value['_id'] = key
             self.add(value)
+
+@dataclass
+class Query:
+    def __init__(self) -> None:
+        self.selector: Dict[str, Dict[str, Any]]
+        self.limit: int = 25
+        self.skip: int
+        self.sort: Dict[Any, Any]
+        self.fields: List[str]
+        self.use_index: List[str]
+        self._r = 1
+        self._bookmark = ''
+        self._update = False
+        self._stable = False
+        self._stale = ''
+        self._execution_status = False
+
+    
+    
+    
+    def to_json(self) -> Dict[str, Any]:
+        ret = {}
+        ret['selector'] = self.selector.copy()
+        
+        return ret
+        

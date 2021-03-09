@@ -85,7 +85,7 @@ class Client:
     def list_database_names(self) -> List[str]:
         ret = []
         if (resp := self.conn.get(path='_all_dbs')).status == 200:
-            ret = resp.get_data()
+            ret = resp.get_data().get('rows', [])
         return ret
      
     def __iter__(self):
