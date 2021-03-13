@@ -242,7 +242,7 @@ class Database:
         for doc in docs:
             yield self.get(doc["id"])
 
-    def find(self, query: Query):
+    def find(self, query: FindQuery):
         resp = self.conn.post(path=f'{self.name}/_find', data=query.to_json())
         if resp.status == 200:
             return resp.get_data()
@@ -305,7 +305,7 @@ class Database:
             self.add(value)
 
 @dataclass
-class Query:
+class FindQuery:
     def __init__(self) -> None:
         self.selector: Dict[str, Dict[str, Any]]
         self.limit: int = 25
@@ -313,19 +313,32 @@ class Query:
         self.sort: Dict[Any, Any]
         self.fields: List[str]
         self.use_index: List[str]
-        self._r = 1
-        self._bookmark = ''
-        self._update = False
-        self._stable = False
-        self._stale = ''
-        self._execution_status = False
+        self.r: int = 1
+        self.bookmark: str
+        self.update: bool = False
+        self.stable: bool = False
+        self.stale: str
+        self.execution_status: bool = False
 
-    
-    
-    
     def to_json(self) -> Dict[str, Any]:
         ret = {}
         ret['selector'] = self.selector.copy()
+        
+        ret['limit'] = self.limit
+        
+        if self.skip:
+            ret['skip'] = self.skip
+        
+        if self.sort:
+            ret['sort'] = self.sort
+            
+        if self.fields:
+            ret['fields'] = self.fields
+        
+        if self.use_index:
+            ret['']
+        
+        
         
         return ret
         
