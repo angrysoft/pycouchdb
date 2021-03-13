@@ -20,7 +20,7 @@ from .exceptions import ServerError
 
 class Server:
 
-    def __init__(self, url:str='http://localhost:5984', port:int=5984, user:str="", password:str="", ssl:bool=False):
+    def __init__(self, url:str='http://localhost:5984'):
         """Server constructor
         Args:
             url (str): url to database server
@@ -32,14 +32,14 @@ class Server:
         resp = self.conn.get()
         return resp.get_data()
 
-    def active_tasks(self):
+    def active_tasks(self) -> List[Any]:
         resp = self.conn.get(path='_active_tasks')
         return resp.get_data()
 
-    def all_dbs(self) -> List[str]:
+    def list_database_names(self) -> List[str]:
         """Returns a list of all the databases in the CouchDB instance.
         """
-        ret = []
+        ret: List[str] = []
         if (resp := self.conn.get(path='_all_dbs')).status == 200:
             ret = resp.get_data()
         return ret

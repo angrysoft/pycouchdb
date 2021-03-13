@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 from dataclasses import dataclass
-from re import L
 from .connections import Connection
 from .exceptions import DatabaseError
 from typing import Any, Dict, List, Tuple
@@ -72,7 +71,7 @@ class Database:
             the event of a failure, since the documents are not written 
             to disk immediately.
         """
-        query={}
+        query: Dict[str,str] = {}
         if batch:
             query={'batch': 'ok'}
         
