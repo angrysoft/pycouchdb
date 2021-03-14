@@ -53,25 +53,19 @@ class UrllibConn(Connection):
             
         req = Request(url=f'{self.url}/{quote(path)}{_query}', method=method, data=data, headers=headers)
         with self.lock:    
-            # try:
-            resp = urlopen(req)
-            # data = resp.read()
-            return UrllibResponse(resp)
-            # except urllib.error.HTTPError as err:
-            #     u = err
-            #     print(u.status, u.getheaders(), u.msg, u.reason, dir(u))
-            #     print(type(err), dir(err))
-            #     return Response(err)
+            try:
+                resp = urlopen(req)
+                return UrllibResponse(resp)
+            except urllib.error.HTTPError as err:
+                return UrllibResponseError(err)
 
 class UrllibResponse(Response):
     def __init__(self, resp: HTTPResponse):
         self.resp = resp
-        self._headers = {}
+        self._headers: Dict[str, str] = {}
         if resp.readable:
             self.body = resp.read()
-            self._headers = resp.headers
-
-
+            
     @property
     def status(self):
         return self.resp.status
@@ -84,3 +78,8 @@ class UrllibResponse(Response):
 
     def get_headers(self):
         return self.resp.headers
+
+class UrllibResponseError(UrllibResponse):
+    def __init__(self, resp: urllib.error.HTTPError):
+        self.resp = resp
+        self._headers: Dict[str, str] = {}

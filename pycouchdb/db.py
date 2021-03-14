@@ -94,7 +94,8 @@ class Database:
             raise DatabaseError(resp.status)
     
     def get(self, doc_id:str, attachments:bool=False, att_encoding_info:bool=False,
-            atts_since:List[str]=[], conflicts:bool=False, deleted_conflicts:bool=False, latest:bool=False):
+            atts_since:List[str]=[], conflicts:bool=False,
+            deleted_conflicts:bool=False, latest:bool=False) -> Dict[str, Any]:
         """
             Get document by id
             
@@ -127,18 +128,18 @@ class Database:
         
         # TODO query options
         
-        _query = {}
-        headers = {}
+        query: Dict[str, Any] = {}
+        headers: Dict[str,str] = {}
         
         if attachments:
             headers.update({'Accept': 'application/json, multipart/related, multipart/mixed, text/plain'})
-            _query['attachments'] =  'true'
+            query['attachments'] =  'true'
         
         if att_encoding_info:
-            _query['att_encoding_info'] = 'true'
+            query['att_encoding_info'] = 'true'
         
         
-        resp = self.conn.get(f'{self.name}/{doc_id}', query=_query)
+        resp = self.conn.get(f'{self.name}/{doc_id}', query=query)
         if resp.status in (200, 304):
             return resp.get_data()
         elif resp.status == 400:
@@ -226,7 +227,7 @@ class Database:
             raise DatabaseError(resp.status)
     
     def list_documents_names(self) -> List[Dict[str, Any]]:
-        ret = []
+        ret: List[Dict[str, Any]] = []
         if (resp := self.conn.get(path=f'{self.name}/_all_docs')).status == 200:
             ret = resp.get_data().get('rows', [])
         return ret
@@ -305,22 +306,21 @@ class Database:
 
 @dataclass
 class FindQuery:
-    def __init__(self) -> None:
-        self.selector: Dict[str, Dict[str, Any]]
-        self.limit: int = 25
-        self.skip: int
-        self.sort: Dict[Any, Any]
-        self.fields: List[str]
-        self.use_index: List[str]
-        self.r: int = 1
-        self.bookmark: str
-        self.update: bool = False
-        self.stable: bool = False
-        self.stale: str
-        self.execution_status: bool = False
+    selector: Dict[str, Dict[str, Any]]
+    limit: int = 25
+    skip: int = 0
+    sort: Dict[Any, Any]
+    fields: List[str]
+    use_index: List[str]
+    r: int = 1
+    bookmark: str
+    update: bool = False
+    stable: bool = False
+    stale: str
+    execution_status: bool = False
 
     def to_json(self) -> Dict[str, Any]:
-        ret = {}
+        ret: Dict[str, Any] = {}
         ret['selector'] = self.selector.copy()
         
         ret['limit'] = self.limit

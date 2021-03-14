@@ -1,3 +1,4 @@
+from pycouchdb.db import FindQuery
 import pytest
 from pycouchdb.client import Client
 
@@ -15,15 +16,39 @@ docs_list = [{'number': 1, 'name': 'one', 'type': 'number'},
              {'letter': 'e', 'name': 'e', 'type': 'letter'}]
 
 
-@pytest.mark.order1
+
 def test_create_db():
     _client.create('testdb')
     assert 'testdb' in _client
 
 
-@pytest.mark.last
+def test_add_document():
+        for i, d in enumerate(docs_list):
+            d['_id'] = str(i)
+            db = _client.get_db('testdb')
+            assert type(db.add(d)) is tuple
+
+
+def test_update_document():
+        db = _client.get_db('testdb')
+        db.update('0', {'name': 'oneone'})
+        db['1'] = {'name': 'twotwo'}
+        db['123'] = {'name': 'notexists'}
+
+
+def test_get_document():
+    db = _client.get_db('testdb')
+    assert db['0']['name'] is str
+
+
+def test_find_documents():
+    db = _client.get_db('testdb')
+    query = FindQuery()
+    query.selector['type'] = 'number'
+    ret = db.find(query)
+    assert len(ret) == 5
+
+
 def test_delete_db():
     _client.delete('testdb')
     assert 'testdb' not in _client
-
-    

@@ -83,7 +83,7 @@ class Client:
             raise ServerError(resp.status)
     
     def list_database_names(self) -> List[str]:
-        ret = []
+        ret: List[str] = []
         if (resp := self.conn.get(path='_all_dbs')).status == 200:
             ret = resp.get_data().get('rows', [])
         return ret
