@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from dataclasses import dataclass
 from .connections import Connection
 from .exceptions import DatabaseError
+from .query import FindQuery, IndexQuery
 from typing import Any, Dict, List, Tuple
 
 # TODO Attchement
@@ -153,7 +153,7 @@ class Database:
     def get_many(self,  ids: List[Dict[str, str]]) -> List[Dict[Any, Any]]:
         headers:Dict[str,str] = {'Accept': 'application/json, multipart/related, multipart/mixed'}
                 
-        resp = self.conn.post(path=f'{self.name}/_bulk_get', data=ids, headers=headers)
+        resp = self.conn.post(path=f'{self.name}/_bulk_get', data={'docs': ids}, headers=headers)
         if resp.status == 200:
             ret = resp.get_data()
             return ret.get('results', [])
@@ -231,11 +231,6 @@ class Database:
         if (resp := self.conn.get(path=f'{self.name}/_all_docs')).status == 200:
             ret = resp.get_data().get('rows', [])
         return ret
-
-    # def all_docs(self, *keys:str) -> Dict[str, Any]:
-    #     path = f'{self.name}/_all_docs'
-    #     if keys:
-    #         resp = self.conn.post(path, data={"keys": list(keys)})
     
     def get_all(self):
         docs:List[Dict[str, Any]] = self.list_documents_names()
@@ -251,6 +246,62 @@ class Database:
         else:
             raise DatabaseError(resp.status)
     
+    def set_index(self, index: IndexQuery) -> Dict[str,str]:
+        resp = self.conn.post(path=f'{self.name}/_index', data=index.to_json())
+        ret: Dict[str, str] = {}
+        if resp.status == 200:
+            ret = resp.get_data()
+        elif resp.status >= 400:
+            raise DatabaseError(code=resp.status)
+        
+        return ret
+    
+    def get_indexes(self) -> Dict[str, Any]:
+        """Get a list of all indexes in the database.
+        In addition to the information available through this API,
+        indexes are also stored in design documents <index-functions>.
+        Design documents are regular documents that have an ID starting with _design/.
+        Design documents can be retrieved and modified in the same way as any other document,
+        although this is not necessary when using Mango.
+        
+        Return:
+            dict: total_rows (int) – Number of indexes
+                  indexes (list) – Array of index definitions
+        
+        Raises:
+            DatabaseError"""
+        
+        resp = self.conn.get(path=f'{self.name}/_index')
+        
+        ret: Dict[str, Any] = {}
+        if resp.status == 200:
+            ret = resp.get_data()
+        elif resp.status >= 400:
+            raise DatabaseError(code=resp.status)
+        
+        return ret
+    
+    def delete_index(self, design:str, name:str = '') -> Dict[str, bool]:
+        """Delete index
+        Args:
+            design (str): Design Document ID starting with _design/
+            name (str): Name of index 
+        
+        Return:
+            dict: for example {"ok": true}
+        
+        Raises:
+            DatabaseError"""
+        
+        resp = self.conn.delete(path=f"{self.name}/_index/{design}/json/{name}")
+        ret: Dict[str, Any] = {}
+        if resp.status == 200:
+            ret = resp.get_data()
+        elif resp.status >= 400:
+            raise DatabaseError(code=resp.status)
+        
+        return ret    
+    
     def purge(self, docinfo:Dict[str, List[str]]):
         """A database purge permanently removes the references to documents in the database.
         Normal deletion of a document within CouchDB does not remove the document from the database,
@@ -260,6 +311,7 @@ class Database:
         The purge request must include the document IDs, and for each document ID, one or more revisions that must be purged.
         Documents can be previously deleted, but it is not necessary. Revisions must be leaf revisions.
         """
+        
         resp = self.conn.post(path=f'{self.name}/_purge', data=docinfo)
         if resp.status in (201, 202):
             ret = resp.get_data()
@@ -304,40 +356,5 @@ class Database:
             value['_id'] = key
             self.add(value)
 
-@dataclass
-class FindQuery:
-    selector: Dict[str, Dict[str, Any]]
-    limit: int = 25
-    skip: int = 0
-    sort: Dict[Any, Any]
-    fields: List[str]
-    use_index: List[str]
-    r: int = 1
-    bookmark: str
-    update: bool = False
-    stable: bool = False
-    stale: str
-    execution_status: bool = False
 
-    def to_json(self) -> Dict[str, Any]:
-        ret: Dict[str, Any] = {}
-        ret['selector'] = self.selector.copy()
-        
-        ret['limit'] = self.limit
-        
-        if self.skip:
-            ret['skip'] = self.skip
-        
-        if self.sort:
-            ret['sort'] = self.sort
-            
-        if self.fields:
-            ret['fields'] = self.fields
-        
-        if self.use_index:
-            ret['']
-        
-        
-        
-        return ret
         

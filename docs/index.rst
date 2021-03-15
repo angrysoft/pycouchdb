@@ -24,6 +24,12 @@ PyCouchDB server
 .. autoclass:: Server
     :members:
 
+PyCouchDB client
+================
+.. automodule:: pycouchdb.client
+.. autoclass:: Client
+    :members:
+
 PyCouchDB db
 ============
 .. automodule:: pycouchdb.db
