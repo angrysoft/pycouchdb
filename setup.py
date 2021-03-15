@@ -8,10 +8,10 @@ setup(
     name=name,
     version=version,
     packages=['pycouchdb'],
-    url='',
+    url='https://github.com/angrysoft/pycouchdb',
     license='Apache 2.0',
-    author='AngrySoft',
+    author='AngrySoft Sebastian Zwierzchowski',
     author_email='sebastian.zwierzchowski@gmail.com',
     description='Python module for couchdb',
-    scripts=['tools/dumpdb.py', 'tools/restoredb.py'],
+    scripts=['tools/pycouchctl.py',],
 )
