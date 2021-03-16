@@ -51,12 +51,11 @@ class Database:
             raise DatabaseError(resp.status)
 
 
-    def add(self, doc:Dict[Any, Any], batch:bool = False) -> Tuple[str, str]:
+    def add(self, doc:Dict[Any, Any]) -> Tuple[str, str]:
         """Creates a new document in database
             
             Args:
                 doc (dict): Document ID. 
-                batch (bool): Stores document in batch mode
              
             Returns:
                 tuple: document id, revision
@@ -64,25 +63,31 @@ class Database:
             Raises:
                 DatabaseError
             
-            You can write documents to the database at a higher rate by using the 
-            batch option. This collects document writes together in memory
-            (on a per-user basis) before they are committed to disk.
-            This increases the risk of the documents not being stored in 
-            the event of a failure, since the documents are not written 
-            to disk immediately.
         """
-        query: Dict[str,str] = {}
-        if batch:
-            query={'batch': 'ok'}
         
         if type(doc.get('_id', '')) is not str:
             raise DatabaseError("_id: need to be a str")
 
-        if (resp := self.conn.post(path=self.name, data=doc, query=query)).status in (201, 202):
+        if (resp := self.conn.post(path=self.name, data=doc)).status in (201, 202):
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
         else:
+            print(f"Err {doc}")
             raise DatabaseError(resp.status)
+    
+    def add_batch(self, doc:Dict[Any, Any]):
+        """write documents to the database at a higher rate by using the 
+            batch option. This collects document writes together in memory
+            (on a per-user basis) before they are committed to disk.
+            This increases the risk of the documents not being stored in 
+            the event of a failure, since the documents are not written 
+            to disk immediately."""
+            
+        if (resp := self.conn.post(path=self.name, data=doc, query={'batch': 'ok'})).status in (201, 202):
+            ret = resp.get_data()
+            return ret
+        else:
+            raise DatabaseError(resp.status, messeage=f"Err {doc}")
     
     def add_many(self, docs: List[Dict[Any, Any]]):
         resp = self.conn.post(path=f'{self.name}/_bulk_docs', data={'docs': docs})
