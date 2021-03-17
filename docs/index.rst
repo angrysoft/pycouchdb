@@ -35,9 +35,3 @@ PyCouchDB db
 .. automodule:: pycouchdb.db
 .. autoclass:: Database
     :members:
-
-PyCouchDB document
-==================
-.. automodule:: pycouchdb.doc
-.. autoclass:: Document
-    :members:

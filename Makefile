@@ -1,4 +1,4 @@
-docs:
+docs: 
 	make -C docs/ text
 
 

@@ -12,18 +12,18 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('../'))
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'PyCouchDB'
-copyright = '2019 - 2020, Sebastian Zwierzchowski [ AngrySoft ]'
+copyright = '2019 - 2021, Sebastian Zwierzchowski [ AngrySoft ]'
 author = 'Sebastian Zwierzchowski [ AngrySoft ]'
 
 # The full version, including alpha/beta/rc tags
-release = '0.2'
-version = '0.3'
+release = '0.1'
+version = '0.4'
 
 # -- General configuration ---------------------------------------------------
 

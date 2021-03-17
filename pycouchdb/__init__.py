@@ -13,10 +13,9 @@
 # limitations under the License.
 __version__ = "0.4"
 
-__all__ = ['Server', 'Client', 'Database', 'Document', 'ServerError', 'DatabaseError', 'DocumentError']
+__all__ = ['Server', 'Client', 'Database', 'ServerError', 'DatabaseError', 'DocumentError']
 
 from .server import Server
 from .client import Client
 from .db import Database
-from .doc import Document
 from .exceptions import ServerError, DatabaseError, DocumentError
