@@ -100,7 +100,8 @@ class Database:
     
     def get(self, doc_id:str, attachments:bool=False, att_encoding_info:bool=False,
             atts_since:List[str]=[], conflicts:bool=False,
-            deleted_conflicts:bool=False, latest:bool=False) -> Dict[str, Any]:
+            deleted_conflicts:bool=False, latest:bool=False,
+            rev: str = '', revs:bool = False) -> Dict[str, Any]:
         """
             Get document by id
             
@@ -142,6 +143,9 @@ class Database:
         
         if att_encoding_info:
             query['att_encoding_info'] = 'true'
+        
+        if rev:
+            query['rev'] = rev
         
         
         resp = self.conn.get(f'{self.name}/{doc_id}', query=query)

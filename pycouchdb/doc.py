@@ -1,9 +1,43 @@
-import json
+from collections.abc import MutableMapping
+from pycouchdb.db import Database
+from .json import Json
+from typing import Any, Optional, Dict
 
 class DocumentList:
     pass
 
-class Document: #(metaclass=MetaDocument):
+class Document(MutableMapping):
+    def __init__(self, db: Optional[Database] = None, **kwargs:str) -> None:
+        self._doc:Dict[str, Any] = {}
+        if kwargs:
+            self.update(kwargs)
+        self._db = db
+    
+    @property
+    def id(self) -> str:
+        return self._doc.get('_id', '')
+    
+    @id.setter
+    def id(self, value:str):
+        self._doc['_id'] = value
+        
+    @property
+    def rev(self) -> str:
+        return self._doc.get('_rev', '')
+    
+    @rev.setter
+    def rev(self, value:str):
+        self._doc['_rev'] = value
+    
+    def __str__(self) -> str:
+        return str(self._doc)
+    
+    def update(self, **kwargs:str) -> None:
+        self._doc.update(kwargs)
+        
+    
+
+class _Document:
     
     @classmethod
     def from_dict(cls, data, db=None):

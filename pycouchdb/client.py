@@ -8,16 +8,8 @@ from typing import Callable, List
 
 
 class Client:
-    """"Main class to connect to Database
+    """"Main class to connect to Database"""
     
-    Example:
-        srv = Client("http://localhost)
-        srv.create('userdb')
-        users = srv.db('userdb')
-        usr = {'name': 'john', 'lastname':'doe'}
-        users.add(usr)
-        srv.delete('usersdb')
-    """
     def __init__(self, url:str, connection_engine: Callable[[str], Connection] = UrllibConn) -> None:
         self.conn: Connection = connection_engine(url)
         
@@ -83,6 +75,12 @@ class Client:
             raise ServerError(resp.status)
     
     def list_database_names(self) -> List[str]:
+        """ List of all databases names
+        
+        Returns:
+            list:   databases names
+        """
+        
         ret: List[str] = []
         if (resp := self.conn.get(path='_all_dbs')).status == 200:
             ret = resp.get_data().get('rows', [])
