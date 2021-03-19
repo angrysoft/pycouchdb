@@ -55,12 +55,19 @@ class Document(MutableMapping):
     def popitem(self) -> Any:
         return self._doc.popitem()
     
-    def save(self):
+    def store(self):
         self._db.update(self.id, self._doc, rev=self.rev)
         
-    def save_to_databse(self, db:Database):
+    def store_to_databse(self, db:Database):
         db.update(self.id, self._doc, rev=self.rev)
-                    
+    
+    def load_from_database(self, db: Database, doc_id:str, doc_rev:str = ''):
+        doc = db.get(doc_id, rev=doc_rev)
+        self.id = doc.pop("_id", "")
+        self.rev = doc.pop("_rev", "")
+        self.db = db
+        self._doc.update(doc)
+                            
     def __str__(self) -> str:
         return f"<Document {self._doc}>"
         
