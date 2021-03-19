@@ -1,5 +1,5 @@
-docs: 
-	make -C docs/ text
+docs:
+	make -C docs html
 
 
 test: tests

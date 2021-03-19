@@ -32,8 +32,14 @@ class Document(MutableMapping):
     def __str__(self) -> str:
         return str(self._doc)
     
-    def update(self, **kwargs:str) -> None:
+    def update(self, **kwargs: str) -> None:
         self._doc.update(kwargs)
+        
+    def __getitem__(self, key: str) -> Any:
+        return self._doc[key]
+
+    def __setitem__(self, key: str, value: Any):
+        self._doc[key] = value
         
     
 

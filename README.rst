@@ -1,7 +1,7 @@
 PyCouchdb
 =========
 
-Python library for `CouchDb`_
+Python client library for `CouchDb`_  3.x.x
 
 
 - Library `documentation`_
@@ -28,6 +28,5 @@ Create database and get access , update
    >>> cli.delete('usersdb')
 
 .. _Downloads: http://pypi.python.org/pypi/PyCouchDB
-.. _PyPI: http://pypi.python.org/
 .. _documentation: http://pycouchdb.readthedocs.io/en/latest/
 .. _CouchDb: https://couchdb.apache.org/
