@@ -8,13 +8,13 @@ from typing import Callable, List
 
 
 class Client:
-    """"Main class to connect to Database"""
+    """Main class to connect to Database"""
     
     def __init__(self, url:str, connection_engine: Callable[[str], Connection] = UrllibConn) -> None:
         self.conn: Connection = connection_engine(url)
         
     def get_db(self, name:str):
-        """Return interface to database
+        """Return database instance
         
         Args:
             name (str): Database name

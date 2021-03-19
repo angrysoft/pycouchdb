@@ -41,6 +41,12 @@ PyCouchDB Database
 .. autoclass:: Database
    :members:
 
+PyCouchDB Document
+==================
+.. automodule:: pycouchdb.doc
+.. autoclass:: Document
+   :members:
+
 PyCouchDB Server
 ================
 .. automodule:: pycouchdb.server

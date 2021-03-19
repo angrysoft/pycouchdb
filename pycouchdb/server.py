@@ -19,7 +19,9 @@ from .exceptions import ServerError
      
 
 class Server:
-
+    """The CouchDB server interface provides the basic interface to a CouchDB server
+    for obtaining CouchDB information and getting and setting configuration information.
+    """
     def __init__(self, url:str='http://localhost:5984'):
         """Server constructor
         Args:
@@ -32,7 +34,24 @@ class Server:
         resp = self.conn.get()
         return resp.get_data()
 
-    def active_tasks(self) -> List[Any]:
+    def active_tasks(self) -> List[Dict[str,Any]]:
+        """List of running tasks, including the task type, name, status and process ID.
+        The result is a JSON array of the currently running tasks,
+        with each task being described with a single object.
+        Depending on operation type set of response object fields might be different.
+
+        Returns:
+            List[Dict[str,Any]]:    changes_done (number) – Processed changes
+                                    database (string) – Source database
+                                    pid (string) – Process ID
+                                    progress (number) – Current percentage progress
+                                    started_on (number) – Task start time as unix timestamp
+                                    status (string) – Task status message
+                                    task (string) – Task name
+                                    total_changes (number) – Total changes to process
+                                    type (string) – Operation Type
+                                    updated_on (number) – Unix timestamp of last operation update
+        """
         resp = self.conn.get(path='_active_tasks')
         return resp.get_data()
 

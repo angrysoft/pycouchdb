@@ -8,6 +8,7 @@ class DocumentList:
     pass
 
 class Document(MutableMapping):
+    """ Document class"""
     def __init__(self, _dict:Optional[Dict[Any,Any]] = None, **kwargs:str) -> None:
         self._doc:Dict[str, Any] = {}
         
@@ -21,6 +22,7 @@ class Document(MutableMapping):
     
     @property
     def db(self) -> Database:
+        """Database instance"""
         if self._db is None:
             raise DocumentError('Database is not set')
         return self._db
@@ -31,6 +33,7 @@ class Document(MutableMapping):
     
     @property
     def id(self) -> str:
+        """Document id"""
         return self._doc.get('_id', '')
     
     @id.setter
@@ -39,6 +42,7 @@ class Document(MutableMapping):
         
     @property
     def rev(self) -> str:
+        """Document revision"""
         return self._doc.get('_rev', '')
     
     @rev.setter
@@ -47,6 +51,7 @@ class Document(MutableMapping):
     
     @property
     def json(self) -> str:
+        """serialized to json string"""
         return Json.dumps(self._doc)
     
     def pop(self, key:str, default: Any=None) -> Any:
@@ -56,12 +61,15 @@ class Document(MutableMapping):
         return self._doc.popitem()
     
     def store(self):
+        """Store document to databse if databse instance is set else raise DocumentError"""
         self._db.update(self.id, self._doc, rev=self.rev)
         
     def store_to_databse(self, db:Database):
+        """Store document to given database instace"""
         db.update(self.id, self._doc, rev=self.rev)
     
     def load_from_database(self, db: Database, doc_id:str, doc_rev:str = ''):
+        """Load document from given database instance and set db as current"""
         doc = db.get(doc_id, rev=doc_rev)
         self.id = doc.pop("_id", "")
         self.rev = doc.pop("_rev", "")

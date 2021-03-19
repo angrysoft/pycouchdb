@@ -15,7 +15,7 @@ from __future__ import annotations
 from .connections import Connection
 from .exceptions import DatabaseError
 from .query import FindQuery, IndexQuery
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Iterator, List, Tuple
 
 # TODO Attchement
 class Database:
@@ -33,14 +33,14 @@ class Database:
     def doc_info(self, doc_id:str) -> Dict[str, Any]:
         """Minimal amount of information about the specified document.
            
-            Args: 
-                docid (str): Document ID.
-                
-            Returns:
-                dict: Dictionary with keys rev - revision, size - size of document , date
+        Args: 
+            docid (str): Document ID.
             
-            Raises:
-                DatabaseError
+        Returns:
+            dict: Dictionary with keys rev - revision, size - size of document , date
+        
+        Raises:
+            DatabaseError
         """
         
         if (resp := self.conn.head(path=f'{self.name}/{doc_id}')).status in (200, 304):
@@ -54,14 +54,14 @@ class Database:
     def add(self, doc:Dict[Any, Any]) -> Tuple[str, str]:
         """Creates a new document in database
             
-            Args:
-                doc (dict): Document ID. 
-             
-            Returns:
-                tuple: document id, revision
+        Args:
+            doc (dict): Document ID. 
             
-            Raises:
-                DatabaseError
+        Returns:
+            tuple: document id, revision
+        
+        Raises:
+            DatabaseError
             
         """
         
@@ -101,19 +101,18 @@ class Database:
             atts_since:List[str]=[], conflicts:bool=False,
             deleted_conflicts:bool=False, latest:bool=False,
             rev: str = '', revs:bool = False) -> Dict[str, Any]:
-        """
-            Get document by id
+        """Get document by id
             
-            Args:
-                doc_id (str): Document ID
-                attachments (bool): Includes attachments bodies in response.Default is false
-                att_encoding_info (bool): Includes encoding
-            
-            Returns: 
-                Document
-            
-            Raises:
-                DatabaseError
+        Args:
+            doc_id (str): Document ID
+            attachments (bool): Includes attachments bodies in response.Default is false
+            att_encoding_info (bool): Includes encoding
+        
+        Returns: 
+            Document
+        
+        Raises:
+            DatabaseError
         """    
             # 
             #     information in attachment stubs if the particular attachment is compressed.Default is false.
@@ -159,6 +158,17 @@ class Database:
             raise DatabaseError(resp.status)
     
     def get_many(self,  ids: List[Dict[str, str]]) -> List[Dict[Any, Any]]:
+        """Get document list
+        
+        Args:
+            ids (list): list of dict {'id': 'someid'}
+            
+        Returns: 
+            list: Document list
+        
+        Raises:
+            DatabaseError
+        """
         headers:Dict[str,str] = {'Accept': 'application/json, multipart/related, multipart/mixed'}
                 
         resp = self.conn.post(path=f'{self.name}/_bulk_get', data={'docs': ids}, headers=headers)
@@ -171,6 +181,20 @@ class Database:
             raise DatabaseError(resp.status)
 
     def update(self, doc_id:str, doc: Dict[str, Any], rev:str= '') -> Tuple[str, str]:
+        """Update document in database
+            
+        Args:
+            doc_id (str): Document ID.
+            doc(dict): Document
+            rev(str): Document’s revision if updating an existing document.
+            
+        Returns:
+            tuple: document id, revision
+        
+        Raises:
+            DatabaseError
+            
+        """
         headers = {'Content-Type': 'application/json, multipart/related'}
         _doc = self.get(doc_id, rev=rev)
         _doc.update(doc)
@@ -235,14 +259,24 @@ class Database:
         else:
             raise DatabaseError(resp.status)
     
-    def list_documents_names(self) -> List[Dict[str, Any]]:
+    def list_documents(self) -> List[Dict[str, Any]]:
+        """List all documents names in database
+        
+        Return:
+            list: Document names"""
+        
         ret: List[Dict[str, Any]] = []
         if (resp := self.conn.get(path=f'{self.name}/_all_docs')).status == 200:
             ret = resp.get_data().get('rows', [])
         return ret
     
-    def get_all(self):
-        docs:List[Dict[str, Any]] = self.list_documents_names()
+    def get_all_docs(self) -> Iterator[Dict[str, Any]]:
+        """Returns iterator for all documents in database
+
+        Yields:
+            dict: Document
+        """
+        docs:List[Dict[str, Any]] = self.list_documents()
         for doc in docs:
             yield self.get(doc["id"])
 
@@ -256,6 +290,17 @@ class Database:
             raise DatabaseError(resp.status)
     
     def set_index(self, index: IndexQuery) -> Dict[str,str]:
+        """Create a new index on a database
+
+        Args:
+            index (IndexQuery): see IndexQuery documentation for details
+
+        Raises:
+            DatabaseError:
+
+        Returns:
+            Dict[str,str]: dict with keys result with status of creating index, id of index , and index name
+        """
         resp = self.conn.post(path=f'{self.name}/_index', data=index.to_json())
         ret: Dict[str, str] = {}
         if resp.status == 200:
@@ -343,7 +388,7 @@ class Database:
             raise DatabaseError(resp.status)
 
     def __iter__(self):
-        self.rows = self.list_documents_names()
+        self.rows = self.list_documents()
         self.i = 0
         return self
 
