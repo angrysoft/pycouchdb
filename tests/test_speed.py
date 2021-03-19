@@ -13,7 +13,7 @@ if db_name in _client:
 _client.create(db_name)
 db = _client.get_db(db_name)
 doc = {'number': 1, 'name': 'one', 'type': 'number'}
-_to = 1000
+_to = 500
 
 def db_add():
     for i in range(0, _to):

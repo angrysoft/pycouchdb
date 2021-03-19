@@ -72,7 +72,6 @@ class Database:
             ret = resp.get_data()
             return ret.get('id'), ret.get('rev')
         else:
-            print(f"Err {doc}")
             raise DatabaseError(resp.status)
     
     def add_batch(self, doc:Dict[Any, Any]):
@@ -171,14 +170,12 @@ class Database:
         else:
             raise DatabaseError(resp.status)
 
-    def update(self, doc_id:str, doc: Dict[str, Any], batch:bool = False) -> Tuple[str, str]:
+    def update(self, doc_id:str, doc: Dict[str, Any], rev:str= '') -> Tuple[str, str]:
         headers = {'Content-Type': 'application/json, multipart/related'}
-        _doc = self.get(doc_id)
+        _doc = self.get(doc_id, rev=rev)
         _doc.update(doc)
         
-        query={'rev': _doc.get('_rev')}
-        if batch:
-            query['batch'] = 'ok'
+        query = {'rev': _doc.get('_rev')}
         
         resp = self.conn.put(path=f'{self.name}/{doc_id}',
                              data=_doc,
@@ -205,7 +202,7 @@ class Database:
         else:
             raise DatabaseError(resp.status)
     
-    def delete(self, doc_id:str, batch:bool = False) -> Tuple[str, str]:
+    def delete(self, doc_id:str, rev:str='') -> Tuple[str, str]:
         """Marks the specified document as deleted
         
         Args:
@@ -217,11 +214,14 @@ class Database:
         Raises:
             DatabaseError
         """
-        info = self.doc_info(doc_id)
+        query: Dict[str, Any] = {}
         
-        query={'rev': info.get('rev')}
-        if batch:
-            query['batch'] = 'ok'
+        if rev:
+            query['rev'] = rev
+        else:
+            info = self.doc_info(doc_id)
+            query={'rev': info.get('rev', '')}
+            
         resp = self.conn.delete(path=f'{self.name}/{doc_id}', query=query)
         if resp.status in (200, 202):
             ret = resp.get_data()
