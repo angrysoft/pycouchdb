@@ -1,6 +1,6 @@
 from collections.abc import MutableMapping
-from pycouchdb.exceptions import DocumentError
-from pycouchdb.db import Database
+from .exceptions import DocumentError
+from .db import Database
 from .json import Json
 from typing import Any, Iterator, Optional, Dict
 

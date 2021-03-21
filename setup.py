@@ -10,7 +10,7 @@ with open("README.rst", "r", encoding="utf-8") as fh:
 setup(
     name=name,
     version=version,
-    packages=['pycouchdb'],
+    packages=['pycouchdb', 'pycouchdb/connections'],
     url='https://github.com/angrysoft/pycouchdb',
     license='Apache 2.0',
     classifiers=[

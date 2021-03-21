@@ -14,7 +14,15 @@
 
 __version__ = "0.4"
 
-__all__ = ['Server', 'Client', 'Document', 'Database', 'ServerError', 'DatabaseError', 'DocumentError']
+__all__ = [
+    'Server',
+    'Client',
+    'Document',
+    'Database',
+    'UrllibConn',
+    'ServerError',
+    'DatabaseError',
+    'DocumentError']
 
 from .server import Server
 from .client import Client
