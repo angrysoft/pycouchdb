@@ -27,6 +27,6 @@ Create database and get access , update
    >>> users.delete(_id)
    >>> cli.delete('usersdb')
 
-.. _Downloads: http://pypi.python.org/pypi/PyCouchDB
+.. _Downloads: http://pypi.python.org/pypi/python-pycouchdb
 .. _documentation: https://python-pycouchdb.readthedocs.io/en/latest/
 .. _CouchDb: https://couchdb.apache.org/

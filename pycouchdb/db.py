@@ -113,7 +113,7 @@ class Database:
         
         Raises:
             DatabaseError
-        """    
+        """
             # 
             #     information in attachment stubs if the particular attachment is compressed.Default is false.
             # atts_since(array) – Includes attachments only since specified revisions.Doesn’t includes attachments
