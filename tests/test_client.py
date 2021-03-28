@@ -1,4 +1,5 @@
 from typing import Dict, List, Any
+import typing
 import pytest
 from pycouchdb.db import Database
 from pycouchdb.query import FindQuery, IndexQuery
@@ -28,6 +29,10 @@ def test_create_db():
     _client.create('testdb')
     assert 'testdb' in _client
 
+
+def test_list_db_names(db: Database):
+    assert type(_client.list_database_names()) == list
+    
 
 def test_add_document(db: Database):
         for i, d in enumerate(docs_list):
