@@ -5,7 +5,7 @@ Python client library for `CouchDb`_  3.x.x
 
 
 - Library `documentation`_
-- pypi `Downloads`_
+- pypi
 
 Example
 -------
